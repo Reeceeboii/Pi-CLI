@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+// stores the data needed by Pi-CLI during runtime
+type PiCLIData struct {
+	settings *Settings
+	APIKey   string
+}
+
 func startUI() {
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)

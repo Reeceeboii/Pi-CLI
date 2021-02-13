@@ -1,19 +1,51 @@
 package main
 
-import "fmt"
-
-const (
-	defaultAddress  = "127.0.0.1"
-	defaultPort     = 80
-	defaultRefreshS = 1
+import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
+	"os"
 )
 
+const (
+	defaultPort     = 80
+	defaultRefreshS = 1
+	configFileName  = "config.json"
+)
+
+// Settings contains the current configuration options being used by the program
 type Settings struct {
 	PiHoleAddress string `json:"pi_hole_address"`
-	PiHolePort    int64  `json:"pi_hole_port"`
-	RefreshS      int64  `json:"refresh_s"`
+	PiHolePort    int    `json:"pi_hole_port"`
+	RefreshS      int    `json:"refresh_s"`
 }
 
+// checks for the existence of a config file
+func configFileExists() bool {
+	_, err := os.Stat(configFileName)
+	return !os.IsNotExist(err)
+}
+
+// Attempts to create a settings instance from a config file
 func (settings *Settings) loadFromFile() {
-	fmt.Println("looking for file...")
+	if byteArr, err := ioutil.ReadFile(configFileName); err != nil {
+		log.Fatal(err)
+	} else {
+		if err := json.Unmarshal(byteArr, settings); err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+// Saves the current settings to a config file
+func (settings *Settings) saveToFile() {
+	byteArr, err := json.MarshalIndent(settings, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err = ioutil.WriteFile(configFileName, byteArr, 0644); err != nil {
+		log.Fatal(err)
+	} else {
+		log.Println("Saved configuration to " + configFileName)
+	}
 }
