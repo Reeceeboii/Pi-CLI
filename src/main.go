@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 	"log"
@@ -10,15 +11,24 @@ import (
 
 // stores the data needed by Pi-CLI during runtime
 type PiCLIData struct {
-	settings *Settings
-	APIKey   string
+	Settings            *Settings
+	FormattedAPIAddress string
+	APIKey              string
+}
+
+var piCLIData = PiCLIData{}
+
+var basicData = BasicData{
+	QueriesToday:        0,
+	BlockedToday:        0,
+	PercentBlockedToday: 0.0,
+	DomainsOnBlocklist:  0,
 }
 
 func startUI() {
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
-
 	defer ui.Close()
 
 	totalQueries := widgets.NewParagraph()
@@ -38,11 +48,14 @@ func startUI() {
 	domainsOnBlocklist.SetRect(75, 0, 100, 3)
 
 	draw := func() {
+		basicData.update()
+		totalQueries.Text = fmt.Sprintf("%d", basicData.QueriesToday)
+		queriesBlocked.Text = fmt.Sprintf("%d", basicData.BlockedToday)
 		ui.Render(totalQueries, queriesBlocked, percentBlocked, domainsOnBlocklist)
 	}
 
 	uiEvents := ui.PollEvents()
-	ticker := time.NewTicker(time.Second / 5).C
+	ticker := time.NewTicker(time.Second / 10).C
 	for {
 		select {
 		case e := <-uiEvents:

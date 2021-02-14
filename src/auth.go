@@ -10,8 +10,6 @@ const (
 	user    = service
 )
 
-var APIKey = ""
-
 // retrieve the API key from the system keyring
 func retrieveAPIKey() string {
 	APIKey, err := keyring.Get(service, user)

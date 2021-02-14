@@ -90,6 +90,25 @@ var app = cli.App{
 		{
 			Name:    "config",
 			Aliases: []string{"c"},
+			Usage:   "View currently saved configuration data for verification",
+			Action: func(c *cli.Context) error {
+				// if the config file is present, that can be loaded and displayed
+				if configFileExists() {
+					configFileData := Settings{}
+					configFileData.loadFromFile()
+					fmt.Printf("%s%s\n", "Pi-Hole address: ", configFileData.PiHoleAddress)
+					fmt.Printf("%s%d\n", "Pi-Hole port: ", configFileData.PiHolePort)
+					fmt.Printf("%s%d%s\n", "Refresh rate: ", configFileData.RefreshS, "s")
+				} else {
+					fmt.Println("No config file is present - run the setup command to create one")
+				}
+				if APIKeyExists() {
+					fmt.Printf("%s%s\n", "API key: ", retrieveAPIKey())
+				} else {
+					fmt.Println("No API key has been provided - run the setup command to enter it")
+				}
+				return nil
+			},
 		},
 	},
 
@@ -97,14 +116,11 @@ var app = cli.App{
 		if !configFileExists() || !APIKeyExists() {
 			log.Fatal("Please configure Pi-CLI via the 'setup' command")
 		}
-		loadConfig()
-		//startUI()
+		settings.loadFromFile()
+		piCLIData.Settings = &settings
+		piCLIData.APIKey = retrieveAPIKey()
+		piCLIData.FormattedAPIAddress = generateAPIAddress()
+		startUI()
 		return nil
 	},
-}
-
-// load the configuration data from the file and the system keyring
-func loadConfig() {
-	settings.loadFromFile()
-	APIKey = retrieveAPIKey()
 }
