@@ -21,6 +21,7 @@ var summary = Summary{
 	BlockedToday:        "0",
 	PercentBlockedToday: "0.0",
 	DomainsOnBlocklist:  "0",
+	Status:              "",
 }
 
 var topItems = TopItems{

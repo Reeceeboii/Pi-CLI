@@ -102,6 +102,8 @@ var app = cli.App{
 				} else {
 					fmt.Println("No config file is present - run the setup command to create one")
 				}
+
+				// and the same with the API key
 				if APIKeyExists() {
 					fmt.Printf("%s%s\n", "API key: ", retrieveAPIKey())
 				} else {
@@ -116,6 +118,7 @@ var app = cli.App{
 		if !configFileExists() || !APIKeyExists() {
 			log.Fatal("Please configure Pi-CLI via the 'setup' command")
 		}
+
 		settings.loadFromFile()
 		piCLIData.Settings = &settings
 		piCLIData.APIKey = retrieveAPIKey()

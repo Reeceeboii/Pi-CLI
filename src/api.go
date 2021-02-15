@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -21,6 +22,7 @@ const (
 	AdsBlockedTodayKey     = "ads_blocked_today"
 	PercentBlockedTodayKey = "ads_percentage_today"
 	DomainsOnBlockListKey  = "domains_being_blocked"
+	StatusKey              = "status"
 	// TopItems
 	TopQueriesTodayKey = "top_queries"
 	TopAdsTodayKey     = "top_ads"
@@ -32,6 +34,7 @@ type Summary struct {
 	BlockedToday        string
 	PercentBlockedToday string
 	DomainsOnBlocklist  string
+	Status              string
 }
 
 // TopItems stores top permitted domains and top blocked domains (requires authentication to retrieve)
@@ -40,6 +43,11 @@ type TopItems struct {
 	TopAds           map[string]int
 	PrettyTopQueries []string
 	PrettyTopAds     []string
+}
+
+type domainOccurrencePair struct {
+	domain     string
+	occurrence int
 }
 
 // updates a Summary struct with up to date information
@@ -58,15 +66,12 @@ func (summary *Summary) update() {
 
 	parsedBody, _ := ioutil.ReadAll(res.Body)
 	// yoink out all the data from the response
-	queriesToday, _ := jsonparser.GetString(parsedBody, DNSQueriesTodayKey)
-	blockedToday, _ := jsonparser.GetString(parsedBody, AdsBlockedTodayKey)
-	percentageToday, _ := jsonparser.GetString(parsedBody, PercentBlockedTodayKey)
-	domainsOnBlocklist, _ := jsonparser.GetString(parsedBody, DomainsOnBlockListKey)
 	// pack it into the struct
-	summary.QueriesToday = queriesToday
-	summary.BlockedToday = blockedToday
-	summary.PercentBlockedToday = percentageToday
-	summary.DomainsOnBlocklist = domainsOnBlocklist
+	summary.QueriesToday, _ = jsonparser.GetString(parsedBody, DNSQueriesTodayKey)
+	summary.BlockedToday, _ = jsonparser.GetString(parsedBody, AdsBlockedTodayKey)
+	summary.PercentBlockedToday, _ = jsonparser.GetString(parsedBody, PercentBlockedTodayKey)
+	summary.DomainsOnBlocklist, _ = jsonparser.GetString(parsedBody, DomainsOnBlockListKey)
+	summary.Status, _ = jsonparser.GetString(parsedBody, StatusKey)
 }
 
 // updates a TopItems struct with up to date information
@@ -98,17 +103,42 @@ func (topItems *TopItems) update() {
 	}, TopAdsTodayKey)
 }
 
-// convert maps of domain:hits to a nice lists that can be displayed
+// convert maps of domain:hits to nice lists that can be displayed
 func (topItems *TopItems) prettyConvert() {
+	var sortedTopQueries []domainOccurrencePair
+	var sortedTopAds []domainOccurrencePair
 	topItems.PrettyTopQueries = []string{}
 	topItems.PrettyTopAds = []string{}
 
 	for key, value := range topItems.TopQueries {
-		topItems.PrettyTopQueries = append(topItems.PrettyTopQueries, fmt.Sprintf("[%d] %s", value, key))
+		sortedTopQueries = append(sortedTopQueries, domainOccurrencePair{
+			domain:     key,
+			occurrence: value,
+		})
 	}
 
 	for key, value := range topItems.TopAds {
-		topItems.PrettyTopAds = append(topItems.PrettyTopAds, fmt.Sprintf("[%d] %s", value, key))
+		sortedTopAds = append(sortedTopAds, domainOccurrencePair{
+			domain:     key,
+			occurrence: value,
+		})
+	}
+
+	// sort ads and domains by occurrence
+	sort.Slice(sortedTopQueries[:], func(i, j int) bool {
+		return sortedTopQueries[i].occurrence > sortedTopQueries[j].occurrence
+	})
+	sort.Slice(sortedTopAds[:], func(i, j int) bool {
+		return sortedTopAds[i].occurrence > sortedTopAds[j].occurrence
+	})
+
+	for _, domain := range sortedTopQueries {
+		listEntry := fmt.Sprintf("%d hits | %s", domain.occurrence, domain.domain)
+		topItems.PrettyTopQueries = append(topItems.PrettyTopQueries, listEntry)
+	}
+	for _, domain := range sortedTopAds {
+		listEntry := fmt.Sprintf("%d hits | %s", domain.occurrence, domain.domain)
+		topItems.PrettyTopAds = append(topItems.PrettyTopAds, listEntry)
 	}
 }
 
