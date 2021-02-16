@@ -1,16 +1,12 @@
 package main
 
 import (
+	"fmt"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 	"log"
 	"strings"
 	"time"
-)
-
-const (
-	Quarter = 1.0 / 4
-	Tenth   = 1.0 / 10
 )
 
 // update data so it can be displayed
@@ -22,12 +18,34 @@ func updateData() {
 	piCLIData.LastUpdated = time.Now()
 }
 
+// given a value representing the current privacy level, return the level name
+// https://docs.pi-hole.net/ftldns/privacylevels/
+func getPrivacyLevel(level *string) string {
+	switch *level {
+	case "0":
+		return "0 - Show Everything"
+	case "1":
+		return "1 - Hide Domains"
+	case "2":
+		return "2 - Hide Domains and Clients"
+	case "3":
+		return "3 - Anonymous"
+	}
+	return *level
+}
+
 // create and start the UI rendering
 func startUI() {
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
 	defer ui.Close()
+
+	piHoleInfo := widgets.NewList()
+	piHoleInfo.Border = false
+
+	DNSAndClientInfo := widgets.NewList()
+	DNSAndClientInfo.Border = false
 
 	totalQueries := widgets.NewParagraph()
 	totalQueries.Title = "Queries /24hr"
@@ -57,25 +75,23 @@ func startUI() {
 	topAds.Title = "Top 10 Blocked Domains"
 	topAds.Rows = topItems.PrettyTopAds
 
-	bottomText := widgets.NewParagraph()
-	bottomText.Border = false
-
 	grid := ui.NewGrid()
 	w, h := ui.TerminalDimensions()
 	grid.SetRect(0, 0, w, h)
 	grid.Set(
-		ui.NewRow(Tenth,
+		ui.NewRow(.15,
+			ui.NewCol(.5, piHoleInfo),
+			ui.NewCol(.5, DNSAndClientInfo),
+		),
+		ui.NewRow(.12,
 			ui.NewCol(.25, totalQueries),
 			ui.NewCol(.25, queriesBlocked),
 			ui.NewCol(.25, percentBlocked),
 			ui.NewCol(.25, domainsOnBlocklist),
 		),
-		ui.NewRow(.37,
+		ui.NewRow(.4,
 			ui.NewCol(.5, topQueries),
 			ui.NewCol(.5, topAds),
-		),
-		ui.NewRow(1.0/3,
-			ui.NewCol(.5, bottomText),
 		),
 	)
 
@@ -90,14 +106,17 @@ func startUI() {
 		topQueries.Rows = topItems.PrettyTopQueries
 		topAds.Rows = topItems.PrettyTopAds
 
-		// bottom text
+		// status text
 		formattedTime := piCLIData.LastUpdated.Format("15:04:05")
-		if summary.Status == "enabled" {
-			bottomText.TextStyle.Fg = ui.ColorGreen
-		} else {
-			bottomText.TextStyle.Fg = ui.ColorRed
+
+		piHoleInfo.Rows = []string{
+			fmt.Sprintf("Pi-Hole Status: %s", strings.Title(summary.Status)),
+			fmt.Sprintf("Data last updated: %s", formattedTime),
 		}
-		bottomText.Text = "Last updated: " + formattedTime + " | Status: " + strings.Title(summary.Status)
+		DNSAndClientInfo.Rows = []string{
+			fmt.Sprintf("Privacy Level: %s", getPrivacyLevel(&summary.PrivacyLevel)),
+			fmt.Sprintf("Total Clients Seen: %s", summary.TotalClientsSeen),
+		}
 
 		// update the grid given the current terminal dimensions
 		w, h := ui.TerminalDimensions()

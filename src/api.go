@@ -23,9 +23,13 @@ const (
 	PercentBlockedTodayKey = "ads_percentage_today"
 	DomainsOnBlockListKey  = "domains_being_blocked"
 	StatusKey              = "status"
+	PrivacyLevelKey        = "privacy_level"
+	TotalClientsSeenKey    = "clients_ever_seen"
 	// TopItems
 	TopQueriesTodayKey = "top_queries"
 	TopAdsTodayKey     = "top_ads"
+	// GetAllQueries
+	AllQueryDataKey = "data"
 )
 
 // Summary holds things that do not require authentication to retrieve
@@ -35,6 +39,8 @@ type Summary struct {
 	PercentBlockedToday string
 	DomainsOnBlocklist  string
 	Status              string
+	PrivacyLevel        string
+	TotalClientsSeen    string
 }
 
 // TopItems stores top permitted domains and top blocked domains (requires authentication to retrieve)
@@ -43,6 +49,21 @@ type TopItems struct {
 	TopAds           map[string]int
 	PrettyTopQueries []string
 	PrettyTopAds     []string
+}
+
+// holds information about a single query logged by Pi-Hole
+type query struct {
+	UnixTime     string
+	QueryType    string
+	Domain       string
+	OriginClient string
+	ForwardedTo  string
+}
+
+// holds a slice of query structs
+type AllQueries struct {
+	Queries              []query
+	AmountOfQueriesInLog int
 }
 
 type domainOccurrencePair struct {
@@ -72,6 +93,8 @@ func (summary *Summary) update() {
 	summary.PercentBlockedToday, _ = jsonparser.GetString(parsedBody, PercentBlockedTodayKey)
 	summary.DomainsOnBlocklist, _ = jsonparser.GetString(parsedBody, DomainsOnBlockListKey)
 	summary.Status, _ = jsonparser.GetString(parsedBody, StatusKey)
+	summary.PrivacyLevel, _ = jsonparser.GetString(parsedBody, PrivacyLevelKey)
+	summary.TotalClientsSeen, _ = jsonparser.GetString(parsedBody, TotalClientsSeenKey)
 }
 
 // updates a TopItems struct with up to date information
@@ -140,6 +163,27 @@ func (topItems *TopItems) prettyConvert() {
 		listEntry := fmt.Sprintf("%d hits | %s", domain.occurrence, domain.domain)
 		topItems.PrettyTopAds = append(topItems.PrettyTopAds, listEntry)
 	}
+}
+
+func (allQueries *AllQueries) update() {
+	url := piCLIData.FormattedAPIAddress + "?getAllQueries=" + strconv.Itoa(allQueries.AmountOfQueriesInLog) + "&auth=" + piCLIData.APIKey
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer res.Body.Close()
+
+	parsedBody, _ := ioutil.ReadAll(res.Body)
+	// extract the base query array
+	queryArray, _, _, _ := jsonparser.Get(parsedBody, AllQueryDataKey)
+	jsonparser.ArrayEach(parsedBody, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+		fmt.Println(jsonparser.GetString(value))
+	}, AllQueryDataKey)
 }
 
 // plug the Pi-Hole address and port together to get a full URL

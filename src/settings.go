@@ -7,12 +7,6 @@ import (
 	"os"
 )
 
-const (
-	defaultPort     = 80
-	defaultRefreshS = 1
-	configFileName  = "config.json"
-)
-
 // Settings contains the current configuration options being used by the program
 type Settings struct {
 	PiHoleAddress string `json:"pi_hole_address"`
