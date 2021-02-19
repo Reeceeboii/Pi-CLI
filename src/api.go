@@ -34,13 +34,14 @@ const (
 
 // Summary holds things that do not require authentication to retrieve
 type Summary struct {
-	QueriesToday        string
-	BlockedToday        string
-	PercentBlockedToday string
-	DomainsOnBlocklist  string
-	Status              string
-	PrivacyLevel        string
-	TotalClientsSeen    string
+	QueriesToday              string
+	BlockedToday              string
+	PercentBlockedToday       string
+	DomainsOnBlocklist        string
+	Status                    string
+	PrivacyLevel              string
+	PrivacyLevelNumberMapping map[string]string
+	TotalClientsSeen          string
 }
 
 // TopItems stores top permitted domains and top blocked domains (requires authentication to retrieve)
@@ -148,10 +149,10 @@ func (topItems *TopItems) prettyConvert() {
 	}
 
 	// sort ads and domains by occurrence
-	sort.Slice(sortedTopQueries[:], func(i, j int) bool {
+	sort.SliceStable(sortedTopQueries[:], func(i, j int) bool {
 		return sortedTopQueries[i].occurrence > sortedTopQueries[j].occurrence
 	})
-	sort.Slice(sortedTopAds[:], func(i, j int) bool {
+	sort.SliceStable(sortedTopAds[:], func(i, j int) bool {
 		return sortedTopAds[i].occurrence > sortedTopAds[j].occurrence
 	})
 
@@ -179,11 +180,24 @@ func (allQueries *AllQueries) update() {
 	defer res.Body.Close()
 
 	parsedBody, _ := ioutil.ReadAll(res.Body)
-	// extract the base query array
-	queryArray, _, _, _ := jsonparser.Get(parsedBody, AllQueryDataKey)
-	jsonparser.ArrayEach(parsedBody, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
-		fmt.Println(jsonparser.GetString(value))
-	}, AllQueryDataKey)
+	// for every index in the parsed body's data array, pull out the required fields
+	// I tried to use ArrayEach here but couldn't seem to get it to work the way I wanted
+	// there has to be a nicer way to do this. This approach is absolute garbage
+	for iter := 0; iter < allQueries.AmountOfQueriesInLog; iter++ {
+		queryArray, _, _, _ := jsonparser.Get(parsedBody, AllQueryDataKey, fmt.Sprintf("[%d]", iter))
+		unixTime, _ := jsonparser.GetString(queryArray, "[0]")
+		queryType, _ := jsonparser.GetString(queryArray, "[1]")
+		domain, _ := jsonparser.GetString(queryArray, "[2]")
+		originClient, _ := jsonparser.GetString(queryArray, "[3]")
+		forwardedTo, _ := jsonparser.GetString(queryArray, "[10]")
+		allQueries.Queries[iter] = query{
+			UnixTime:     unixTime,
+			QueryType:    queryType,
+			Domain:       domain,
+			OriginClient: originClient,
+			ForwardedTo:  forwardedTo,
+		}
+	}
 }
 
 // plug the Pi-Hole address and port together to get a full URL

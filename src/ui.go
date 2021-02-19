@@ -14,6 +14,7 @@ import (
 func updateData() {
 	summary.update()
 	topItems.update()
+	allQueries.update()
 	topItems.prettyConvert()
 	piCLIData.LastUpdated = time.Now()
 }
@@ -21,17 +22,7 @@ func updateData() {
 // given a value representing the current privacy level, return the level name
 // https://docs.pi-hole.net/ftldns/privacylevels/
 func getPrivacyLevel(level *string) string {
-	switch *level {
-	case "0":
-		return "0 - Show Everything"
-	case "1":
-		return "1 - Hide Domains"
-	case "2":
-		return "2 - Hide Domains and Clients"
-	case "3":
-		return "3 - Anonymous"
-	}
-	return *level
+	return summary.PrivacyLevelNumberMapping[*level]
 }
 
 // create and start the UI rendering
@@ -43,9 +34,6 @@ func startUI() {
 
 	piHoleInfo := widgets.NewList()
 	piHoleInfo.Border = false
-
-	DNSAndClientInfo := widgets.NewList()
-	DNSAndClientInfo.Border = false
 
 	totalQueries := widgets.NewParagraph()
 	totalQueries.Title = "Queries /24hr"
@@ -75,23 +63,37 @@ func startUI() {
 	topAds.Title = "Top 10 Blocked Domains"
 	topAds.Rows = topItems.PrettyTopAds
 
+	queryLog := widgets.NewTable()
+	queryLog.Title = fmt.Sprintf("Latest %d queries", allQueries.AmountOfQueriesInLog)
+	queryLog.Rows = [][]string{
+		{"Time", "Type", "Domain", "Client", "Upstream"},
+		{"1", "test", "www.google.com", "test", "test"},
+	}
+
 	grid := ui.NewGrid()
 	w, h := ui.TerminalDimensions()
 	grid.SetRect(0, 0, w, h)
+
 	grid.Set(
-		ui.NewRow(.15,
-			ui.NewCol(.5, piHoleInfo),
-			ui.NewCol(.5, DNSAndClientInfo),
-		),
-		ui.NewRow(.12,
-			ui.NewCol(.25, totalQueries),
-			ui.NewCol(.25, queriesBlocked),
-			ui.NewCol(.25, percentBlocked),
-			ui.NewCol(.25, domainsOnBlocklist),
+		ui.NewRow(.2,
+			ui.NewCol(.2,
+				ui.NewRow(.5, totalQueries),
+				ui.NewRow(.5, percentBlocked),
+			),
+			ui.NewCol(.2,
+				ui.NewRow(.5, queriesBlocked),
+				ui.NewRow(.5, domainsOnBlocklist),
+			),
+			ui.NewCol(.6,
+				ui.NewRow(1, piHoleInfo),
+			),
 		),
 		ui.NewRow(.4,
 			ui.NewCol(.5, topQueries),
 			ui.NewCol(.5, topAds),
+		),
+		ui.NewRow(.4,
+			ui.NewCol(1, queryLog),
 		),
 	)
 
@@ -112,8 +114,6 @@ func startUI() {
 		piHoleInfo.Rows = []string{
 			fmt.Sprintf("Pi-Hole Status: %s", strings.Title(summary.Status)),
 			fmt.Sprintf("Data last updated: %s", formattedTime),
-		}
-		DNSAndClientInfo.Rows = []string{
 			fmt.Sprintf("Privacy Level: %s", getPrivacyLevel(&summary.PrivacyLevel)),
 			fmt.Sprintf("Total Clients Seen: %s", summary.TotalClientsSeen),
 		}

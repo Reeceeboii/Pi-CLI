@@ -35,7 +35,13 @@ var summary = Summary{
 	DomainsOnBlocklist:  "",
 	Status:              "",
 	PrivacyLevel:        "",
-	TotalClientsSeen:    "",
+	PrivacyLevelNumberMapping: map[string]string{
+		"0": "Show Everything",
+		"1": "Hide Domains",
+		"2": "Hide Domains and Clients",
+		"3": "Anonymous",
+	},
+	TotalClientsSeen: "",
 }
 
 var topItems = TopItems{
