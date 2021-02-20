@@ -7,12 +7,12 @@ import (
 
 const (
 	service = "PiCLI"
-	user    = service
+	usr     = service
 )
 
 // retrieve the API key from the system keyring
 func retrieveAPIKey() string {
-	APIKey, err := keyring.Get(service, user)
+	APIKey, err := keyring.Get(service, usr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -21,14 +21,14 @@ func retrieveAPIKey() string {
 
 // store the API key in the system keyring
 func storeAPIKey(key *string) {
-	if err := keyring.Set(service, user, *key); err != nil {
+	if err := keyring.Set(service, usr, *key); err != nil {
 		log.Fatal(err)
 	}
 }
 
 // delete the stored API key if it exists
 func deleteAPIKey() bool {
-	if err := keyring.Delete(service, user); err != nil {
+	if err := keyring.Delete(service, usr); err != nil {
 		return false
 	}
 	return true
@@ -36,7 +36,7 @@ func deleteAPIKey() bool {
 
 // does the API key exist?
 func APIKeyExists() bool {
-	if _, err := keyring.Get(service, user); err != nil {
+	if _, err := keyring.Get(service, usr); err != nil {
 		return false
 	}
 	return true

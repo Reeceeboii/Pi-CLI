@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/user"
+	"path"
 )
 
 // Settings contains the current configuration options being used by the program
@@ -14,15 +16,18 @@ type Settings struct {
 	RefreshS      int    `json:"refresh_s"`
 }
 
+// generate the location of the config file (or at least where it should be)
+var configFileLocation = getConfigFileLocation()
+
 // checks for the existence of a config file
 func configFileExists() bool {
-	_, err := os.Stat(configFileName)
+	_, err := os.Stat(configFileLocation)
 	return !os.IsNotExist(err)
 }
 
 // Attempts to create a settings instance from a config file
 func (settings *Settings) loadFromFile() {
-	if byteArr, err := ioutil.ReadFile(configFileName); err != nil {
+	if byteArr, err := ioutil.ReadFile(configFileLocation); err != nil {
 		log.Fatal(err)
 	} else {
 		if err := json.Unmarshal(byteArr, settings); err != nil {
@@ -37,10 +42,10 @@ func (settings *Settings) saveToFile() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err = ioutil.WriteFile(configFileName, byteArr, 0644); err != nil {
+	if err = ioutil.WriteFile(configFileLocation, byteArr, 0644); err != nil {
 		log.Fatal(err)
 	} else {
-		log.Println("Saved configuration to " + configFileName)
+		log.Println("Saved configuration to " + configFileLocation)
 	}
 }
 
@@ -50,8 +55,18 @@ func deleteConfigFile() bool {
 	if !configFileExists() {
 		return false
 	}
-	if err := os.Remove(configFileName); err != nil {
+	if err := os.Remove(configFileLocation); err != nil {
 		return false
 	}
 	return true
+}
+
+// return the path to the config file
+func getConfigFileLocation() string {
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+	}
+	// return user's home directory plus the config file name
+	return path.Join(usr.HomeDir, configFileName)
 }
