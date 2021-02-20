@@ -37,6 +37,15 @@ For help, run `~$ ./picli -h`
    latest-queries, lq  Extract the latest x queries. Takes a flag for -q, the number of queries to extract
 ```
 
+### FAQ
+- Where do I get my API key?
+    - Navigate to your Pi-Hole's web interface, then settings. Click on the API/Web interface tab press 'Show API token'
+- Pre-Compiled binaries?
+    - See [releases](https://github.com/Reeceeboii/Pi-CLI/releases)
+- How do I compile myself?
+    - `cd ./src && go build -o picli`
+
+--- 
 If you find Pi-CLI useful, please consider [donating to the Pi-Hole project](https://pi-hole.net/donate/)
 
 Or, feel free to submit code to make Pi-CLI even more useful!
