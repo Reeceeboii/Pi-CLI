@@ -6,6 +6,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -38,32 +39,52 @@ var app = cli.App{
 			Action: func(c *cli.Context) error {
 				reader := bufio.NewReader(os.Stdin)
 
-				// read in the IP address and check that it is valid
-				fmt.Print("Please enter the IP address of your Pi-Hole: ")
-				piHoleAddress, _ := reader.ReadString('\n')
-				ip := net.ParseIP(strings.TrimSpace(piHoleAddress))
-				if ip == nil {
-					log.Fatal("Please enter a valid IP address")
-				}
-				settings.PiHoleAddress = ip.String()
-
-				// read in the port
-				fmt.Print("Please enter the port that exposes the web interface (default 80): ")
-				piHolePort, _ := reader.ReadString('\n')
-				trimmed := strings.TrimSpace(piHolePort)
-				// if the user entered nothing, keep the default. Else, check and apply theirs
-				if len(trimmed) > 0 {
-					intPiHolePort, _ := strconv.Atoi(trimmed)
-					if intPiHolePort < 1 || intPiHolePort > 65535 {
-						log.Fatal("Please enter a valid port number")
+				addressDetailsValid := false
+				for !addressDetailsValid {
+					// read in the IP address and check that it is valid
+					fmt.Print("Please enter the IP address of your Pi-Hole: ")
+					piHoleAddress, _ := reader.ReadString('\n')
+					ip := net.ParseIP(strings.TrimSpace(piHoleAddress))
+					if ip == nil {
+						log.Fatal("Please enter a valid IP address")
 					}
-					settings.PiHolePort = intPiHolePort
+					settings.PiHoleAddress = ip.String()
+
+					// read in the port
+					fmt.Print("Please enter the port that exposes the web interface (default 80): ")
+					piHolePort, _ := reader.ReadString('\n')
+					trimmed := strings.TrimSpace(piHolePort)
+					// if the user entered nothing, keep the default. Else, check and apply theirs
+					if len(trimmed) > 0 {
+						intPiHolePort, _ := strconv.Atoi(trimmed)
+						if intPiHolePort < 1 || intPiHolePort > 65535 {
+							log.Fatal("Please enter a valid port number")
+						}
+						settings.PiHolePort = intPiHolePort
+					}
+
+					// send a request to the PiHole to validate that the IP and port actually point to it
+					tempURL := fmt.Sprintf("http://%s:%d/admin/api.php", settings.PiHoleAddress, settings.PiHolePort)
+					req, err := http.NewRequest("GET", tempURL, nil)
+					if err != nil {
+						log.Fatal(err)
+					}
+					res, err := client.Do(req)
+
+					// if the details are valid and the request didn't time out...
+					// lazy evaluation saves us from deref errors here and saves a check
+					if err == nil && validatePiHoleDetails(res) {
+						addressDetailsValid = true
+					} else {
+						fmt.Println("Pi-Hole doesn't seem to be alive, check your details and try again!")
+						fmt.Println()
+					}
 				}
 
 				// read in the data refresh rate
 				fmt.Print("Please enter your preferred data refresh rate in seconds (default 1s): ")
 				refreshS, _ := reader.ReadString('\n')
-				trimmed = strings.TrimSpace(refreshS)
+				trimmed := strings.TrimSpace(refreshS)
 				if len(trimmed) > 0 {
 					intRefreshS, err := strconv.Atoi(trimmed)
 					if err != nil {
@@ -109,21 +130,49 @@ var app = cli.App{
 				} else {
 					fmt.Println("No API key has been provided - run the setup command to enter it")
 				}
+
 				return nil
+			},
+		},
+		{
+			Name:    "run",
+			Aliases: []string{"r"},
+			Usage:   "Run a one off command without booting the live view",
+			Subcommands: []*cli.Command{
+				{
+					Name:    "summary",
+					Aliases: []string{"s"},
+					Usage:   "Extract a basic summary of data from the Pi-Hole",
+					Action: func(c *cli.Context) error {
+						initialisePICLI()
+						summary.update()
+						fmt.Printf("Queries /24hr: %s\n", summary.QueriesToday)
+						fmt.Printf("Blocked /24hr: %s\n", summary.BlockedToday)
+						fmt.Printf("Percent blocked: %s%s\n", summary.PercentBlockedToday, "%")
+						fmt.Printf("Domains on blocklist: %s\n", summary.DomainsOnBlocklist)
+						return nil
+					},
+				},
 			},
 		},
 	},
 
 	Action: func(c *cli.Context) error {
-		if !configFileExists() || !APIKeyExists() {
-			log.Fatal("Please configure Pi-CLI via the 'setup' command")
-		}
-
-		settings.loadFromFile()
-		piCLIData.Settings = &settings
-		piCLIData.APIKey = retrieveAPIKey()
-		piCLIData.FormattedAPIAddress = generateAPIAddress()
+		initialisePICLI()
 		startUI()
 		return nil
 	},
+}
+
+// validate that the config file and API key are in place
+// load the required data and settings into memory
+func initialisePICLI() {
+	if !configFileExists() || !APIKeyExists() {
+		log.Fatal("Please configure Pi-CLI via the 'setup' command")
+	}
+
+	settings.loadFromFile()
+	piCLIData.Settings = &settings
+	piCLIData.APIKey = retrieveAPIKey()
+	piCLIData.FormattedAPIAddress = generateAPIAddress()
 }

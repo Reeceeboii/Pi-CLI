@@ -24,9 +24,25 @@ type PiCLIData struct {
 	FormattedAPIAddress string
 	APIKey              string
 	LastUpdated         time.Time
+	ShowKeybindsScreen  bool
+	Keybinds            []string
 }
 
-var piCLIData = PiCLIData{}
+var piCLIData = PiCLIData{
+	Keybinds: []string{
+		"",
+		"---------- Query Log ----------",
+		"",
+		"         [E]  Increase number of queries in query log",
+		"         [D]  Decrease number of queries in query log",
+		"  [UP ARROW]  Scroll up query log",
+		"[DOWN ARROW]  Scroll down query log",
+		"",
+		"---------- Misc. ----------",
+		"",
+		"[Q]  Quit Pi-CLI",
+	},
+}
 
 var summary = Summary{
 	QueriesToday:        "",
@@ -52,8 +68,9 @@ var topItems = TopItems{
 }
 
 var allQueries = AllQueries{
-	Queries:              make([]query, defaultAmountOfQueries),
+	Queries:              make([]Query, defaultAmountOfQueries),
 	AmountOfQueriesInLog: defaultAmountOfQueries,
+	Table:                []string{},
 }
 
 func main() {

@@ -12,7 +12,7 @@ import (
 )
 
 var client = &http.Client{
-	Timeout: time.Second * 10,
+	Timeout: time.Second * 3,
 }
 
 // keys that can be used to index JSON responses from the Pi-Hole's API
@@ -53,7 +53,7 @@ type TopItems struct {
 }
 
 // holds information about a single query logged by Pi-Hole
-type query struct {
+type Query struct {
 	UnixTime     string
 	QueryType    string
 	Domain       string
@@ -63,8 +63,9 @@ type query struct {
 
 // holds a slice of query structs
 type AllQueries struct {
-	Queries              []query
+	Queries              []Query
 	AmountOfQueriesInLog int
+	Table                []string
 }
 
 type domainOccurrencePair struct {
@@ -125,6 +126,8 @@ func (topItems *TopItems) update() {
 		topItems.TopAds[string(key)], _ = strconv.Atoi(string(value))
 		return nil
 	}, TopAdsTodayKey)
+
+	topItems.prettyConvert()
 }
 
 // convert maps of domain:hits to nice lists that can be displayed
@@ -166,6 +169,26 @@ func (topItems *TopItems) prettyConvert() {
 	}
 }
 
+// convert slice of queries to a formatted multidimensional slice
+func (allQueries *AllQueries) convertToTable() {
+	table := make([]string, allQueries.AmountOfQueriesInLog)
+
+	for i, q := range allQueries.Queries {
+		iTime, _ := strconv.ParseInt(q.UnixTime, 10, 64)
+		parsedTime := time.Unix(iTime, 0)
+		entry := fmt.Sprintf("%d [%s] Query type %s from %s to %s forwarded to %s",
+			(allQueries.AmountOfQueriesInLog)-i,
+			parsedTime.Format("15:04:05"),
+			q.QueryType,
+			q.OriginClient,
+			q.Domain,
+			q.ForwardedTo,
+		)
+		table[(allQueries.AmountOfQueriesInLog-1)-i] = entry
+	}
+	allQueries.Table = table
+}
+
 func (allQueries *AllQueries) update() {
 	url := piCLIData.FormattedAPIAddress + "?getAllQueries=" + strconv.Itoa(allQueries.AmountOfQueriesInLog) + "&auth=" + piCLIData.APIKey
 	req, err := http.NewRequest("GET", url, nil)
@@ -190,7 +213,7 @@ func (allQueries *AllQueries) update() {
 		domain, _ := jsonparser.GetString(queryArray, "[2]")
 		originClient, _ := jsonparser.GetString(queryArray, "[3]")
 		forwardedTo, _ := jsonparser.GetString(queryArray, "[10]")
-		allQueries.Queries[iter] = query{
+		allQueries.Queries[iter] = Query{
 			UnixTime:     unixTime,
 			QueryType:    queryType,
 			Domain:       domain,
@@ -198,9 +221,16 @@ func (allQueries *AllQueries) update() {
 			ForwardedTo:  forwardedTo,
 		}
 	}
+
+	allQueries.convertToTable()
 }
 
 // plug the Pi-Hole address and port together to get a full URL
 func generateAPIAddress() string {
 	return fmt.Sprintf("http://%s:%d/admin/api.php", settings.PiHoleAddress, settings.PiHolePort)
+}
+
+// do the provided address & port actually point to a Pi-Hole?
+func validatePiHoleDetails(res *http.Response) bool {
+	return res.StatusCode == 200 && res.Header.Get("X-Pi-hole") != ""
 }

@@ -12,10 +12,9 @@ import (
 // update data so it can be displayed
 // this function makes calls to the Pi-Hole's API
 func updateData() {
-	summary.update()
-	topItems.update()
-	allQueries.update()
-	topItems.prettyConvert()
+	go summary.update()
+	go topItems.update()
+	go allQueries.update()
 	piCLIData.LastUpdated = time.Now()
 }
 
@@ -63,12 +62,13 @@ func startUI() {
 	topAds.Title = "Top 10 Blocked Domains"
 	topAds.Rows = topItems.PrettyTopAds
 
-	queryLog := widgets.NewTable()
+	queryLog := widgets.NewList()
 	queryLog.Title = fmt.Sprintf("Latest %d queries", allQueries.AmountOfQueriesInLog)
-	queryLog.Rows = [][]string{
-		{"Time", "Type", "Domain", "Client", "Upstream"},
-		{"1", "test", "www.google.com", "test", "test"},
-	}
+	queryLog.Rows = allQueries.Table
+
+	keybindsPrompt := widgets.NewParagraph()
+	keybindsPrompt.Text = "Press F1 at any time to view keybinds..."
+	keybindsPrompt.Border = false
 
 	grid := ui.NewGrid()
 	w, h := ui.TerminalDimensions()
@@ -88,41 +88,71 @@ func startUI() {
 				ui.NewRow(1, piHoleInfo),
 			),
 		),
-		ui.NewRow(.4,
+		ui.NewRow(.35,
 			ui.NewCol(.5, topQueries),
 			ui.NewCol(.5, topAds),
 		),
-		ui.NewRow(.4,
+		ui.NewRow(.35,
 			ui.NewCol(1, queryLog),
+		),
+		ui.NewRow(.1,
+			ui.NewCol(1, keybindsPrompt),
+		),
+	)
+
+	keybindsList := widgets.NewList()
+	keybindsList.Title = "Pi-CLI keybinds"
+	keybindsList.Rows = piCLIData.Keybinds
+
+	returnHomePrompt := widgets.NewParagraph()
+	returnHomePrompt.Text = "Press F1 at any time to return home..."
+	returnHomePrompt.Border = false
+
+	keybindsGrid := ui.NewGrid()
+	w, h = ui.TerminalDimensions()
+	keybindsGrid.SetRect(0, 0, w, h)
+	keybindsGrid.Set(
+		ui.NewRow(.9,
+			ui.NewCol(1, keybindsList),
+		),
+		ui.NewRow(.1,
+			ui.NewCol(1, returnHomePrompt),
 		),
 	)
 
 	draw := func() {
-		// 4 top summary boxes
-		totalQueries.Text = summary.QueriesToday
-		queriesBlocked.Text = summary.BlockedToday
-		percentBlocked.Text = summary.PercentBlockedToday + "%"
-		domainsOnBlocklist.Text = summary.DomainsOnBlocklist
+		if !piCLIData.ShowKeybindsScreen {
+			// 4 top summary boxes
+			totalQueries.Text = summary.QueriesToday
+			queriesBlocked.Text = summary.BlockedToday
+			percentBlocked.Text = summary.PercentBlockedToday + "%"
+			domainsOnBlocklist.Text = summary.DomainsOnBlocklist
 
-		// domain lists
-		topQueries.Rows = topItems.PrettyTopQueries
-		topAds.Rows = topItems.PrettyTopAds
+			// domain lists
+			topQueries.Rows = topItems.PrettyTopQueries
+			topAds.Rows = topItems.PrettyTopAds
 
-		// status text
-		formattedTime := piCLIData.LastUpdated.Format("15:04:05")
+			// query log
+			queryLog.Rows = allQueries.Table
+			queryLog.Title = fmt.Sprintf("Latest %d queries", allQueries.AmountOfQueriesInLog)
 
-		piHoleInfo.Rows = []string{
-			fmt.Sprintf("Pi-Hole Status: %s", strings.Title(summary.Status)),
-			fmt.Sprintf("Data last updated: %s", formattedTime),
-			fmt.Sprintf("Privacy Level: %s", getPrivacyLevel(&summary.PrivacyLevel)),
-			fmt.Sprintf("Total Clients Seen: %s", summary.TotalClientsSeen),
+			// status text
+			formattedTime := piCLIData.LastUpdated.Format("15:04:05")
+
+			piHoleInfo.Rows = []string{
+				fmt.Sprintf("Pi-Hole Status: %s", strings.Title(summary.Status)),
+				fmt.Sprintf("Data last updated: %s (update every %ds)", formattedTime, piCLIData.Settings.RefreshS),
+				fmt.Sprintf("Privacy Level: %s", getPrivacyLevel(&summary.PrivacyLevel)),
+				fmt.Sprintf("Total Clients Seen: %s", summary.TotalClientsSeen),
+			}
+
+			// update the grid given the current terminal dimensions
+			w, h := ui.TerminalDimensions()
+			grid.SetRect(0, 0, w, h)
+			ui.Render(grid)
+		} else {
+			ui.Render(keybindsGrid)
 		}
-
-		// update the grid given the current terminal dimensions
-		w, h := ui.TerminalDimensions()
-		grid.SetRect(0, 0, w, h)
-
-		ui.Render(grid)
 	}
 
 	uiEvents := ui.PollEvents()
@@ -130,18 +160,73 @@ func startUI() {
 	ticker := time.NewTicker(time.Second * tickerDuration).C
 
 	updateData()
-	draw()
-
 	for {
+		draw()
 		select {
 		case e := <-uiEvents:
 			switch e.ID {
+
+			// quit
 			case "q", "<C-c>":
 				return
+
+			// respond to terminal resize events
+			case "<Resize>":
+				payload := e.Payload.(ui.Resize)
+				if !piCLIData.ShowKeybindsScreen {
+					grid.SetRect(0, 0, payload.Width, payload.Height)
+					ui.Clear()
+					ui.Render(grid)
+					break
+				}
+				keybindsGrid.SetRect(0, 0, payload.Width, payload.Height)
+				ui.Clear()
+				ui.Render(keybindsGrid)
+				break
+
+			// increase number of queries in query log by 1
+			case "e":
+				if !piCLIData.ShowKeybindsScreen {
+					allQueries.AmountOfQueriesInLog++
+					allQueries.Queries = append(allQueries.Queries, Query{})
+				}
+				break
+
+			// decrease number of queries in log by 1
+			case "d":
+				if !piCLIData.ShowKeybindsScreen && allQueries.AmountOfQueriesInLog > 1 {
+					allQueries.AmountOfQueriesInLog--
+					allQueries.Queries = allQueries.Queries[:len(allQueries.Queries)-1]
+				}
+				break
+
+			// scroll down in the query log list
+			case "<Down>":
+				if !piCLIData.ShowKeybindsScreen {
+					queryLog.ScrollDown()
+				}
+				break
+
+			// scroll up in the query log list
+			case "<Up>":
+				if !piCLIData.ShowKeybindsScreen {
+					queryLog.ScrollUp()
+				}
+				break
+
+			// switch grids between the keybinds view and the main screen
+			case "<F1>":
+				ui.Clear()
+				piCLIData.ShowKeybindsScreen = !piCLIData.ShowKeybindsScreen
+				break
 			}
+
+		// refresh event
 		case <-ticker:
-			updateData()
-			draw()
+			// there's only a need to make API calls when the keybinds screen isn't being shown
+			if !piCLIData.ShowKeybindsScreen {
+				updateData()
+			}
 		}
 	}
 }
