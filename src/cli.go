@@ -146,10 +146,19 @@ var app = cli.App{
 					Action: func(c *cli.Context) error {
 						initialisePICLI()
 						summary.update()
+						fmt.Println()
+						fmt.Printf("Pi-Hole status: %s\n", strings.Title(summary.Status))
+						fmt.Println()
 						fmt.Printf("Queries /24hr: %s\n", summary.QueriesToday)
 						fmt.Printf("Blocked /24hr: %s\n", summary.BlockedToday)
 						fmt.Printf("Percent blocked: %s%s\n", summary.PercentBlockedToday, "%")
 						fmt.Printf("Domains on blocklist: %s\n", summary.DomainsOnBlocklist)
+						fmt.Printf("Privacy level: %s - %s\n",
+							summary.PrivacyLevel,
+							summary.PrivacyLevelNumberMapping[summary.PrivacyLevel],
+						)
+						fmt.Printf("Total clients seen: %s\n", summary.TotalClientsSeen)
+						fmt.Println()
 						return nil
 					},
 				},
