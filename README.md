@@ -1,4 +1,7 @@
 # Pi-CLI
+
+[![CodeQL](https://github.com/Reeceeboii/Pi-CLI/actions/workflows/codeql-analysis.yml/badge.svg?branch=master)](https://github.com/Reeceeboii/Pi-CLI/actions/workflows/codeql-analysis.yml)
+
 ### Pi-CLI is a command line program used to view data from a Pi-Hole instance directly in your terminal.
 
 ![terminal](./img/terminal.png)
