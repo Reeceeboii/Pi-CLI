@@ -194,7 +194,7 @@ var app = cli.App{
 				{
 					Name:    "latest-queries",
 					Aliases: []string{"lq"},
-					Usage:   "Extract the latest x queries",
+					Usage:   "Extract the latest x queries. Takes a flag for -q, the number of queries to extract",
 					Flags: []cli.Flag{
 						&cli.Int64Flag{
 							Name:    "queries",
