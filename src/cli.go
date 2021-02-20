@@ -146,6 +146,7 @@ var app = cli.App{
 					Action: func(c *cli.Context) error {
 						initialisePICLI()
 						summary.update()
+						fmt.Printf("Summary @ %s\n", time.Now().Format(time.Stamp))
 						fmt.Println()
 						fmt.Printf("Pi-Hole status: %s\n", strings.Title(summary.Status))
 						fmt.Println()
@@ -159,6 +160,61 @@ var app = cli.App{
 						)
 						fmt.Printf("Total clients seen: %s\n", summary.TotalClientsSeen)
 						fmt.Println()
+						return nil
+					},
+				},
+				{
+					Name:    "top-queries",
+					Aliases: []string{"tq"},
+					Usage:   "Extract the current top 10 permitted DNS queries",
+					Action: func(c *cli.Context) error {
+						initialisePICLI()
+						topItems.update()
+						fmt.Printf("Top queries as of @ %s\n\n", time.Now().Format(time.Stamp))
+						for _, q := range topItems.PrettyTopQueries {
+							fmt.Println(q)
+						}
+						return nil
+					},
+				},
+				{
+					Name:    "top-ads",
+					Aliases: []string{"ta"},
+					Usage:   "Extract the current top 10 blocked domains",
+					Action: func(c *cli.Context) error {
+						initialisePICLI()
+						topItems.update()
+						fmt.Printf("Top ads as of @ %s\n\n", time.Now().Format(time.Stamp))
+						for _, q := range topItems.PrettyTopAds {
+							fmt.Println(q)
+						}
+						return nil
+					},
+				},
+				{
+					Name:    "latest-queries",
+					Aliases: []string{"lq"},
+					Usage:   "Extract the latest x queries",
+					Flags: []cli.Flag{
+						&cli.Int64Flag{
+							Name:    "queries",
+							Aliases: []string{"q"},
+							Usage:   "The number of queries to extract",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						queryAmount := c.Int("queries")
+						if queryAmount < 1 {
+							fmt.Println("Please enter a number of queries >= 1")
+							return nil
+						}
+						initialisePICLI()
+						allQueries.AmountOfQueriesInLog = queryAmount
+						allQueries.Queries = make([]Query, allQueries.AmountOfQueriesInLog)
+						allQueries.update()
+						for _, query := range allQueries.Table {
+							fmt.Println(query)
+						}
 						return nil
 					},
 				},
