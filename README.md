@@ -25,8 +25,9 @@ For help, run `~$ ./picli -h`
 ### Commands
 ```
    setup, s   Configure Pi-CLI
-   config, c  View currently saved configuration data for verification
+   config, c  Interact with stored configuration settings
    run, r     Run a one off command without booting the live view
+   help, h    Shows a list of commands or help for one command
 ```
 
 ### One off use of the `run` command
