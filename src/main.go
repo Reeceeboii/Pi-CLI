@@ -13,7 +13,7 @@ const (
 	// the default refresh rate of the data in seconds
 	defaultRefreshS = 1
 	// the name of the configuration file
-	configFileName = "config.json"
+	configFileName = "picli-config.json"
 	// the starting setting for the number of queries that are included in the live log
 	defaultAmountOfQueries = 10
 )
