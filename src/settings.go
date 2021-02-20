@@ -43,3 +43,15 @@ func (settings *Settings) saveToFile() {
 		log.Println("Saved configuration to " + configFileName)
 	}
 }
+
+// delete the config file if it exists
+func deleteConfigFile() bool {
+	// first, check if the file actually exists
+	if !configFileExists() {
+		return false
+	}
+	if err := os.Remove(configFileName); err != nil {
+		return false
+	}
+	return true
+}

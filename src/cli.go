@@ -111,27 +111,52 @@ var app = cli.App{
 		{
 			Name:    "config",
 			Aliases: []string{"c"},
-			Usage:   "View currently saved configuration data for verification",
-			Action: func(c *cli.Context) error {
-				// if the config file is present, that can be loaded and displayed
-				if configFileExists() {
-					configFileData := Settings{}
-					configFileData.loadFromFile()
-					fmt.Printf("%s%s\n", "Pi-Hole address: ", configFileData.PiHoleAddress)
-					fmt.Printf("%s%d\n", "Pi-Hole port: ", configFileData.PiHolePort)
-					fmt.Printf("%s%d%s\n", "Refresh rate: ", configFileData.RefreshS, "s")
-				} else {
-					fmt.Println("No config file is present - run the setup command to create one")
-				}
+			Usage:   "Interact with stored configuration settings",
+			Subcommands: []*cli.Command{
+				{
+					Name:    "delete",
+					Aliases: []string{"d"},
+					Usage:   "Delete stored config data (config file and API key)",
+					Action: func(context *cli.Context) error {
+						if deleteAPIKey() {
+							fmt.Println("Your stored API key has been deleted!")
+						} else {
+							fmt.Println("Pi-CLI did not find an API key to delete")
+						}
+						if deleteConfigFile() {
+							fmt.Println("Stored config file has been deleted!")
+						} else {
+							fmt.Println("Pi-CLI did not find a config file to delete")
+						}
+						return nil
+					},
+				},
+				{
+					Name:    "view",
+					Aliases: []string{"v"},
+					Usage:   "View config stored config data (config file and API key)",
+					Action: func(context *cli.Context) error {
+						// if the config file is present, that can be loaded and displayed
+						if configFileExists() {
+							configFileData := Settings{}
+							configFileData.loadFromFile()
+							fmt.Printf("%s%s\n", "Pi-Hole address: ", configFileData.PiHoleAddress)
+							fmt.Printf("%s%d\n", "Pi-Hole port: ", configFileData.PiHolePort)
+							fmt.Printf("%s%d%s\n", "Refresh rate: ", configFileData.RefreshS, "s")
+						} else {
+							fmt.Println("No config file is present - run the setup command to create one")
+						}
 
-				// and the same with the API key
-				if APIKeyExists() {
-					fmt.Printf("%s%s\n", "API key: ", retrieveAPIKey())
-				} else {
-					fmt.Println("No API key has been provided - run the setup command to enter it")
-				}
+						// and the same with the API key
+						if APIKeyExists() {
+							fmt.Printf("%s%s\n", "API key: ", retrieveAPIKey())
+						} else {
+							fmt.Println("No API key has been provided - run the setup command to enter it")
+						}
 
-				return nil
+						return nil
+					},
+				},
 			},
 		},
 		{

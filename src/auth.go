@@ -26,6 +26,14 @@ func storeAPIKey(key *string) {
 	}
 }
 
+// delete the stored API key if it exists
+func deleteAPIKey() bool {
+	if err := keyring.Delete(service, user); err != nil {
+		return false
+	}
+	return true
+}
+
 // does the API key exist?
 func APIKeyExists() bool {
 	if _, err := keyring.Get(service, user); err != nil {
