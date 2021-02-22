@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -14,6 +15,8 @@ type Settings struct {
 	PiHoleAddress string `json:"pi_hole_address"`
 	PiHolePort    int    `json:"pi_hole_port"`
 	RefreshS      int    `json:"refresh_s"`
+	// API key is either stored in the file or in the system keyring
+	APIKey string `json:"api_key"`
 }
 
 // generate the location of the config file (or at least where it should be)
@@ -45,8 +48,13 @@ func (settings *Settings) saveToFile() {
 	if err = ioutil.WriteFile(configFileLocation, byteArr, 0644); err != nil {
 		log.Fatal(err)
 	} else {
-		log.Println("Saved configuration to " + configFileLocation)
+		fmt.Println("Saved configuration to " + configFileLocation)
 	}
+}
+
+// Is API key stored in the config file? If not, off to the system keyring you go!
+func (settings *Settings) APIKeyIsInFile() bool {
+	return settings.APIKey != ""
 }
 
 // delete the config file if it exists
