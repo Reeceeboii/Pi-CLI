@@ -19,7 +19,7 @@
 - Lightweight
     - In its default configuration, the live view of Pi-CLI only uses ~10MB memory, usually less.
 - Secure
-    - Your API key is never stored in plaintext. Pi-CLI uses cross-platform OS keyring libraries to make sure your Pi-Hole API key is both securely stored and easy to retrieve in the future.
+    - Pi-CLI uses cross-platform OS keyring libraries to make sure your Pi-Hole API key is both securely stored and easy to retrieve in the future. Your API key is never stored in plaintext unless you explicitly tell Pi-CLI to not use your keyring.
     
 ## Usage
 ### `   picli.exe [global options] command [command options] [arguments...]                                                  `
