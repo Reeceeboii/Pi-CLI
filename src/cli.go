@@ -96,15 +96,29 @@ var app = cli.App{
 					settings.RefreshS = intRefreshS
 				}
 
-				fmt.Print("Enter API key (stored securely, not in a file): ")
+				// read in the API key and work out where the user wants to store it (keyring or config file)
+				fmt.Print("Please enter your Pi-Hole API key: ")
 				apiKey, _ := reader.ReadString('\n')
 				apiKey = strings.TrimSpace(apiKey)
 				if len(apiKey) < 1 {
 					log.Fatal("Please provide your API key for authentication")
 				}
-				storeAPIKey(&apiKey)
-				// write config to disk
+
+				fmt.Print("Do you wish to store the API key in your system keyring? (y/n - default y): ")
+				storageChoice, _ := reader.ReadString('\n')
+				storageChoice = strings.ToLower(strings.TrimSpace(storageChoice))
+
+				// if they wish to use their system's keyring...
+				if storageChoice == "y" || len(storageChoice) == 0 {
+					storeAPIKeyInKeyring(&apiKey)
+					fmt.Println("Your API token has been securely stored in your system keyring")
+				} else {
+					settings.APIKey = apiKey
+				}
+
+				// write config file to disk
 				settings.saveToFile()
+				fmt.Println("Configuration successful!")
 				return nil
 			},
 		},
@@ -118,10 +132,10 @@ var app = cli.App{
 					Aliases: []string{"d"},
 					Usage:   "Delete stored config data (config file and API key)",
 					Action: func(context *cli.Context) error {
-						if deleteAPIKey() {
-							fmt.Println("Your stored API key has been deleted!")
+						if deleteAPIKeyFromKeyring() {
+							fmt.Println("System keyring API entry has been deleted!")
 						} else {
-							fmt.Println("Pi-CLI did not find an API key to delete")
+							fmt.Println("Pi-CLI did not find a keyring entry to delete")
 						}
 						if deleteConfigFile() {
 							fmt.Println("Stored config file has been deleted!")
@@ -136,20 +150,22 @@ var app = cli.App{
 					Aliases: []string{"v"},
 					Usage:   "View config stored config data (config file and API key)",
 					Action: func(context *cli.Context) error {
+						settings.loadFromFile()
 						// if the config file is present, that can be loaded and displayed
 						if configFileExists() {
-							configFileData := Settings{}
-							configFileData.loadFromFile()
-							fmt.Printf("%s%s\n", "Pi-Hole address: ", configFileData.PiHoleAddress)
-							fmt.Printf("%s%d\n", "Pi-Hole port: ", configFileData.PiHolePort)
-							fmt.Printf("%s%d%s\n", "Refresh rate: ", configFileData.RefreshS, "s")
+							settings.loadFromFile()
+							fmt.Printf("%s%s\n", "Pi-Hole address: ", settings.PiHoleAddress)
+							fmt.Printf("%s%d\n", "Pi-Hole port: ", settings.PiHolePort)
+							fmt.Printf("%s%d%s\n", "Refresh rate: ", settings.RefreshS, "s")
 						} else {
 							fmt.Println("No config file is present - run the setup command to create one")
 						}
 
 						// and the same with the API key
-						if APIKeyExists() {
-							fmt.Printf("%s%s\n", "API key: ", retrieveAPIKey())
+						if APIKeyIsInKeyring() {
+							fmt.Printf("%s%s\n", "API key (keyring): ", retrieveAPIKeyFromKeyring())
+						} else if settings.APIKeyIsInFile() {
+							fmt.Printf("%s%s\n", "API key (config file): ", settings.APIKey)
 						} else {
 							fmt.Println("No API key has been provided - run the setup command to enter it")
 						}
@@ -257,12 +273,24 @@ var app = cli.App{
 // validate that the config file and API key are in place
 // load the required data and settings into memory
 func initialisePICLI() {
-	if !configFileExists() || !APIKeyExists() {
+	// firstly, has a config file been created?
+	if !configFileExists() {
 		log.Fatal("Please configure Pi-CLI via the 'setup' command")
 	}
 
 	settings.loadFromFile()
+
+	// retrieve the API key depending upon its storage location
+	if !settings.APIKeyIsInFile() && !APIKeyIsInKeyring() {
+		log.Fatal("Please configure Pi-CLI via the 'setup' command")
+	} else {
+		if settings.APIKeyIsInFile() {
+			piCLIData.APIKey = settings.APIKey
+		} else {
+			piCLIData.APIKey = retrieveAPIKeyFromKeyring()
+		}
+	}
+
 	piCLIData.Settings = &settings
-	piCLIData.APIKey = retrieveAPIKey()
 	piCLIData.FormattedAPIAddress = generateAPIAddress()
 }
