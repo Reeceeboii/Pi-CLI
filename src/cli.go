@@ -96,12 +96,28 @@ var app = cli.App{
 					settings.RefreshS = intRefreshS
 				}
 
-				// read in the API key and work out where the user wants to store it (keyring or config file)
-				fmt.Print("Please enter your Pi-Hole API key: ")
-				apiKey, _ := reader.ReadString('\n')
-				apiKey = strings.TrimSpace(apiKey)
-				if len(apiKey) < 1 {
-					log.Fatal("Please provide your API key for authentication")
+				for {
+					// read in the API key and work out where the user wants to store it (keyring or config file)
+					fmt.Print("Please enter your Pi-Hole API key: ")
+					apiKey, _ := reader.ReadString('\n')
+					apiKey = strings.TrimSpace(apiKey)
+					if len(apiKey) < 1 {
+						fmt.Println("Please provide your API key for authentication")
+						continue
+					}
+
+					settings.APIKey = apiKey
+
+					// before we store the API token (keyring or config file), we should check that it's valid
+					// the address + port have been validated by this point so we're safe to shoot requests at it
+					piCLIData.Settings = &settings
+					piCLIData.FormattedAPIAddress = generateAPIAddress()
+
+					if !validateAPIKey(settings.APIKey) {
+						fmt.Println("That API doesn't seem to be correct, check it and try again!")
+					} else {
+						break
+					}
 				}
 
 				fmt.Print("Do you wish to store the API key in your system keyring? (y/n - default y): ")
@@ -110,13 +126,12 @@ var app = cli.App{
 
 				// if they wish to use their system's keyring...
 				if storageChoice == "y" || len(storageChoice) == 0 {
-					storeAPIKeyInKeyring(&apiKey)
+					storeAPIKeyInKeyring(settings.APIKey)
 					fmt.Println("Your API token has been securely stored in your system keyring")
-				} else {
-					settings.APIKey = apiKey
 				}
 
 				// write config file to disk
+				// all fields in the settings struct would have been set by this point
 				settings.saveToFile()
 				fmt.Println("Configuration successful!")
 				return nil
