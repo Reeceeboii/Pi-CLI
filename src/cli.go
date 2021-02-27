@@ -114,7 +114,7 @@ var app = cli.App{
 					piCLIData.FormattedAPIAddress = generateAPIAddress()
 
 					if !validateAPIKey(settings.APIKey) {
-						fmt.Println("That API doesn't seem to be correct, check it and try again!")
+						fmt.Println("That API token doesn't seem to be correct, check it and try again!")
 					} else {
 						break
 					}

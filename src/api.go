@@ -231,6 +231,7 @@ func generateAPIAddress() string {
 }
 
 // do the provided address & port actually point to a Pi-Hole?
+// Issue #16 @https://github.com/Reeceeboii/Pi-CLI/issues/16
 func validatePiHoleDetails(res *http.Response) bool {
-	return res.StatusCode == 200 && res.Header.Get("X-Pi-hole") != ""
+	return res.StatusCode == http.StatusOK
 }
