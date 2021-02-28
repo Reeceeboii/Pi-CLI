@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -68,13 +69,19 @@ type AllQueries struct {
 	Table                []string
 }
 
+// a single domain and the number of times it occurs
 type domainOccurrencePair struct {
 	domain     string
 	occurrence int
 }
 
 // updates a Summary struct with up to date information
-func (summary *Summary) update() {
+func (summary *Summary) update(wg *sync.WaitGroup) {
+	if wg != nil {
+		wg.Add(1)
+		defer wg.Done()
+	}
+
 	url := piCLIData.FormattedAPIAddress + "?summary"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -99,8 +106,45 @@ func (summary *Summary) update() {
 	summary.TotalClientsSeen, _ = jsonparser.GetString(parsedBody, TotalClientsSeenKey)
 }
 
+// enable the Pi-Hole
+func enablePiHole() {
+	url := piCLIData.FormattedAPIAddress + "?enable" + "&auth=" + piCLIData.APIKey
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+// disable the Pi-Hole
+func disablePiHole(timeout bool, time int64) {
+	disable := "?disable"
+	if timeout {
+		disable += fmt.Sprintf("=%d", time)
+	}
+	url := piCLIData.FormattedAPIAddress + disable + "&auth=" + piCLIData.APIKey
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 // updates a TopItems struct with up to date information
-func (topItems *TopItems) update() {
+func (topItems *TopItems) update(wg *sync.WaitGroup) {
+	if wg != nil {
+		wg.Add(1)
+		defer wg.Done()
+	}
+
 	url := piCLIData.FormattedAPIAddress + "?topItems" + "&auth=" + piCLIData.APIKey
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -189,8 +233,14 @@ func (allQueries *AllQueries) convertToTable() {
 	allQueries.Table = table
 }
 
-func (allQueries *AllQueries) update() {
-	url := piCLIData.FormattedAPIAddress + "?getAllQueries=" + strconv.Itoa(allQueries.AmountOfQueriesInLog) + "&auth=" + piCLIData.APIKey
+func (allQueries *AllQueries) update(wg *sync.WaitGroup) {
+	if wg != nil {
+		wg.Add(1)
+		defer wg.Done()
+	}
+
+	queryAmount := strconv.Itoa(allQueries.AmountOfQueriesInLog)
+	url := piCLIData.FormattedAPIAddress + "?getAllQueries=" + queryAmount + "&auth=" + piCLIData.APIKey
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Fatal(err)

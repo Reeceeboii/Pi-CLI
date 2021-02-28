@@ -6,15 +6,19 @@ import (
 	"github.com/gizak/termui/v3/widgets"
 	"log"
 	"strings"
+	"sync"
 	"time"
 )
+
+var wg sync.WaitGroup
 
 // update data so it can be displayed
 // this function makes calls to the Pi-Hole's API
 func updateData() {
-	go summary.update()
-	go topItems.update()
-	go allQueries.update()
+	go summary.update(&wg)
+	go topItems.update(&wg)
+	go allQueries.update(&wg)
+	wg.Wait()
 	piCLIData.LastUpdated = time.Now()
 }
 
@@ -160,6 +164,7 @@ func startUI() {
 	ticker := time.NewTicker(time.Second * tickerDuration).C
 
 	updateData()
+	draw()
 	for {
 		draw()
 		select {
@@ -184,7 +189,7 @@ func startUI() {
 				ui.Render(keybindsGrid)
 				break
 
-			// increase number of queries in query log by 1
+			// increase (by 1) the number of queries in the query log
 			case "e":
 				if !piCLIData.ShowKeybindsScreen {
 					allQueries.AmountOfQueriesInLog++
@@ -192,7 +197,15 @@ func startUI() {
 				}
 				break
 
-			// decrease number of queries in log by 1
+			// increase (by 10) the number of queries in the query log
+			case "r":
+				if !piCLIData.ShowKeybindsScreen {
+					allQueries.AmountOfQueriesInLog += 10
+					allQueries.Queries = append(allQueries.Queries, make([]Query, 10)...)
+				}
+				break
+
+			// decrease (by 1) the number of queries in the query log
 			case "d":
 				if !piCLIData.ShowKeybindsScreen && allQueries.AmountOfQueriesInLog > 1 {
 					allQueries.AmountOfQueriesInLog--
@@ -200,17 +213,55 @@ func startUI() {
 				}
 				break
 
-			// scroll down in the query log list
+			// decrease (by 10) the number of queries in the query log
+			case "f":
+				if !piCLIData.ShowKeybindsScreen {
+					if allQueries.AmountOfQueriesInLog-10 <= 0 {
+						allQueries.AmountOfQueriesInLog = 1
+						allQueries.Queries = allQueries.Queries[:len(allQueries.Queries)-(len(allQueries.Queries)-1)]
+					} else {
+						allQueries.AmountOfQueriesInLog -= 10
+						allQueries.Queries = allQueries.Queries[:len(allQueries.Queries)-10]
+					}
+				}
+				break
+
+			// scroll down (by 1) in the query log list
 			case "<Down>":
 				if !piCLIData.ShowKeybindsScreen {
 					queryLog.ScrollDown()
 				}
 				break
 
-			// scroll up in the query log list
+			// scroll down (by 10) in the query log list
+			case "<PageDown>":
+				if !piCLIData.ShowKeybindsScreen {
+					queryLog.ScrollAmount(10)
+				}
+				break
+
+			// scroll up (by 1) in the query log list
 			case "<Up>":
 				if !piCLIData.ShowKeybindsScreen {
 					queryLog.ScrollUp()
+				}
+				break
+
+			// scroll up (by 10) in the query log list
+			case "<PageUp>":
+				if !piCLIData.ShowKeybindsScreen {
+					queryLog.ScrollAmount(-10)
+				}
+				break
+
+			// enable or disable the Pi-Hole
+			case "p":
+				if !piCLIData.ShowKeybindsScreen {
+					if summary.Status == "enabled" {
+						disablePiHole(false, 0)
+					} else {
+						enablePiHole()
+					}
 				}
 				break
 

@@ -165,8 +165,8 @@ var app = cli.App{
 					Aliases: []string{"v"},
 					Usage:   "View config stored config data (config file and API key)",
 					Action: func(context *cli.Context) error {
-						settings.loadFromFile()
-						// if the config file is present, that can be loaded and displayed
+						// if the config file is present, that can be loaded and displayed,
+						// otherwise, prompt the user to create one
 						if configFileExists() {
 							settings.loadFromFile()
 							fmt.Printf("%s%s\n", "Pi-Hole address: ", settings.PiHoleAddress)
@@ -201,7 +201,7 @@ var app = cli.App{
 					Usage:   "Extract a basic summary of data from the Pi-Hole",
 					Action: func(c *cli.Context) error {
 						initialisePICLI()
-						summary.update()
+						summary.update(nil)
 						fmt.Printf("Summary @ %s\n", time.Now().Format(time.Stamp))
 						fmt.Println()
 						fmt.Printf("Pi-Hole status: %s\n", strings.Title(summary.Status))
@@ -225,7 +225,7 @@ var app = cli.App{
 					Usage:   "Extract the current top 10 permitted DNS queries",
 					Action: func(c *cli.Context) error {
 						initialisePICLI()
-						topItems.update()
+						topItems.update(nil)
 						fmt.Printf("Top queries as of @ %s\n\n", time.Now().Format(time.Stamp))
 						for _, q := range topItems.PrettyTopQueries {
 							fmt.Println(q)
@@ -239,7 +239,7 @@ var app = cli.App{
 					Usage:   "Extract the current top 10 blocked domains",
 					Action: func(c *cli.Context) error {
 						initialisePICLI()
-						topItems.update()
+						topItems.update(nil)
 						fmt.Printf("Top ads as of @ %s\n\n", time.Now().Format(time.Stamp))
 						for _, q := range topItems.PrettyTopAds {
 							fmt.Println(q)
@@ -250,16 +250,20 @@ var app = cli.App{
 				{
 					Name:    "latest-queries",
 					Aliases: []string{"lq"},
-					Usage:   "Extract the latest x queries. Takes a flag for -q, the number of queries to extract",
+					Usage:   "Extract the latest queries",
 					Flags: []cli.Flag{
 						&cli.Int64Flag{
-							Name:    "queries",
-							Aliases: []string{"q"},
-							Usage:   "The number of queries to extract",
+							Name:        "queries",
+							Aliases:     []string{"q"},
+							Usage:       "The number of queries to extract",
+							DefaultText: "10",
 						},
 					},
 					Action: func(c *cli.Context) error {
 						queryAmount := c.Int("queries")
+						if queryAmount == 0 {
+							queryAmount = 10
+						}
 						if queryAmount < 1 {
 							fmt.Println("Please enter a number of queries >= 1")
 							return nil
@@ -267,9 +271,57 @@ var app = cli.App{
 						initialisePICLI()
 						allQueries.AmountOfQueriesInLog = queryAmount
 						allQueries.Queries = make([]Query, allQueries.AmountOfQueriesInLog)
-						allQueries.update()
+						allQueries.update(nil)
 						for _, query := range allQueries.Table {
 							fmt.Println(query)
+						}
+						return nil
+					},
+				},
+				{
+					Name:    "enable",
+					Aliases: []string{"e"},
+					Usage:   "Enable the Pi-Hole",
+					Action: func(context *cli.Context) error {
+						initialisePICLI()
+						summary.update(nil)
+						if summary.Status == "enabled" {
+							fmt.Println("Pi-Hole is already enabled!")
+
+						} else {
+							enablePiHole()
+							fmt.Println("Pi-Hole enabled!")
+						}
+
+						return nil
+					},
+				},
+				{
+					Name:    "disable",
+					Aliases: []string{"d"},
+					Usage:   "Disable the Pi-Hole",
+					Flags: []cli.Flag{
+						&cli.Int64Flag{
+							Name:        "timeout",
+							Aliases:     []string{"t"},
+							Usage:       "A timeout in seconds. Pi-Hole will re-enable when this time has elapsed.",
+							DefaultText: "permanent",
+						},
+					},
+					Action: func(context *cli.Context) error {
+						initialisePICLI()
+						summary.update(nil)
+						if summary.Status == "disabled" {
+							fmt.Println("Pi-Hole is already disabled!")
+						} else {
+							timeout := context.Int64("timeout")
+							if timeout == 0 {
+								disablePiHole(false, 0)
+								fmt.Println("Pi-Hole disabled until explicitly re-enabled")
+							} else {
+								disablePiHole(true, timeout)
+								fmt.Printf("Pi-Hole disabled. Will re-enable in %d seconds\n", timeout)
+							}
 						}
 						return nil
 					},
