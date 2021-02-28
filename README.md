@@ -38,12 +38,14 @@ For help, run `~$ ./picli -h`
    summary, s          Extract a basic summary of data from the Pi-Hole
    top-queries, tq     Extract the current top 10 permitted DNS queries
    top-ads, ta         Extract the current top 10 blocked domains
-   latest-queries, lq  Extract the latest x queries. Takes a flag for -q, the number of queries to extract
+   latest-queries, lq  Extract the latest queries
+   enable, e           Enable the Pi-Hole
+   disable, d          Disable the Pi-Hole
 ```
 
 ### FAQ
 - Where do I get my API key?
-    - Navigate to your Pi-Hole's web interface, then settings. Click on the API/Web interface tab press 'Show API token'
+    - Navigate to your Pi-Hole's web interface, then settings. Click on the API/Web interface tab and press 'Show API token'
 - Pre-Compiled binaries?
     - See [releases](https://github.com/Reeceeboii/Pi-CLI/releases)
 - How do I compile myself?
