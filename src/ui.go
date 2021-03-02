@@ -150,9 +150,7 @@ func startUI() {
 				fmt.Sprintf("Total Clients Seen: %s", summary.TotalClientsSeen),
 			}
 
-			// update the grid given the current terminal dimensions
-			w, h := ui.TerminalDimensions()
-			grid.SetRect(0, 0, w, h)
+			// render the grid
 			ui.Render(grid)
 		} else {
 			ui.Render(keybindsGrid)
@@ -160,13 +158,18 @@ func startUI() {
 	}
 
 	uiEvents := ui.PollEvents()
+
+	// channel used to capture ticker events to time data update events
 	tickerDuration := time.Duration(piCLIData.Settings.RefreshS)
-	ticker := time.NewTicker(time.Second * tickerDuration).C
+	dataUpdateTicker := time.NewTicker(time.Second * tickerDuration).C
+
+	// channel used to capture ticker events to time redraws
+	// ticker event triggered every 33.3ms (30fps) or redraws per second if you want to be pedantic
+	drawTicker := time.NewTicker(time.Second / 30).C
 
 	updateData()
 	draw()
 	for {
-		draw()
 		select {
 		case e := <-uiEvents:
 			switch e.ID {
@@ -180,7 +183,6 @@ func startUI() {
 				payload := e.Payload.(ui.Resize)
 				if !piCLIData.ShowKeybindsScreen {
 					grid.SetRect(0, 0, payload.Width, payload.Height)
-					ui.Clear()
 					ui.Render(grid)
 					break
 				}
@@ -267,17 +269,29 @@ func startUI() {
 
 			// switch grids between the keybinds view and the main screen
 			case "<F1>":
-				ui.Clear()
+				//ui.Clear()
 				piCLIData.ShowKeybindsScreen = !piCLIData.ShowKeybindsScreen
 				break
 			}
 
-		// refresh event
-		case <-ticker:
+		/*
+			Capturing 2 separate ticker channels like this allows the update of the data and the update of the
+			UI to occur independently. Key presses will still be visually responded to and the program itself will
+			*feel* quick and responsive even if the user has set a much longer data refresh rate.
+		*/
+
+		// refresh event used to time API polls for up to date data
+		case <-dataUpdateTicker:
 			// there's only a need to make API calls when the keybinds screen isn't being shown
 			if !piCLIData.ShowKeybindsScreen {
 				updateData()
 			}
+			break
+
+		// draw event used to time UI redraws
+		case <-drawTicker:
+			draw()
+			break
 		}
 	}
 }
