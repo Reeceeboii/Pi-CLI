@@ -4,7 +4,7 @@
 
 ### Pi-CLI is a command line program used to view data from a Pi-Hole instance directly in your terminal.
 
-![terminal](./img/terminal.png)
+![terminal](./img/live-view.png)
 
 ## Features
 
