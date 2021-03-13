@@ -1,4 +1,4 @@
-package main
+package picli
 
 import (
 	"github.com/buger/jsonparser"
