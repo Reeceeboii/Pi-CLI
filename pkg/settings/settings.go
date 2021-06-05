@@ -1,8 +1,9 @@
-package picli
+package settings
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Reeceeboii/Pi-CLI/pkg/constants"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,26 +11,42 @@ import (
 	"path"
 )
 
-// Settings contains the current configuration options being used by the program
+// Store PiCLI settings
+var PICLISettings = NewSettings()
+
+// Settings contains the current configuration options being used by Pi-CLI
 type Settings struct {
+	// The Pi-Hole's address
 	PiHoleAddress string `json:"pi_hole_address"`
-	PiHolePort    int    `json:"pi_hole_port"`
-	RefreshS      int    `json:"refresh_s"`
-	// API key is either stored in the file or in the system keyring
+	// The port the Pi-Hole exposes that can be used for HTTP/S traffic
+	PiHolePort int `json:"pi_hole_port"`
+	// The number of seconds to wait between each data refresh
+	RefreshS int `json:"refresh_s"`
+	// API key used to authenticate with the Pi-Hole instance
 	APIKey string `json:"api_key"`
 }
 
-// generate the location of the config file (or at least where it should be)
+// Generate the location of the config file (or at least where it should be)
 var configFileLocation = getConfigFileLocation()
 
-// checks for the existence of a config file
-func configFileExists() bool {
+// Checks for the existence of a config file
+func ConfigFileExists() bool {
 	_, err := os.Stat(configFileLocation)
 	return !os.IsNotExist(err)
 }
 
+// Return a new Settings instance
+func NewSettings() *Settings {
+	return &Settings{
+		PiHoleAddress: "",
+		PiHolePort:    constants.DefaultPort,
+		RefreshS:      constants.DefaultRefreshS,
+		APIKey:        "",
+	}
+}
+
 // Attempts to create a settings instance from a config file
-func (settings *Settings) loadFromFile() {
+func (settings *Settings) LoadFromFile() {
 	if byteArr, err := ioutil.ReadFile(configFileLocation); err != nil {
 		log.Fatal(err)
 	} else {
@@ -40,7 +57,7 @@ func (settings *Settings) loadFromFile() {
 }
 
 // Saves the current settings to a config file
-func (settings *Settings) saveToFile() {
+func (settings *Settings) SaveToFile() {
 	byteArr, err := json.MarshalIndent(settings, "", "\t")
 	if err != nil {
 		log.Fatal(err)
@@ -57,10 +74,10 @@ func (settings *Settings) APIKeyIsInFile() bool {
 	return settings.APIKey != ""
 }
 
-// delete the config file if it exists
-func deleteConfigFile() bool {
+// Delete the config file if it exists
+func DeleteConfigFile() bool {
 	// first, check if the file actually exists
-	if !configFileExists() {
+	if !ConfigFileExists() {
 		return false
 	}
 	if err := os.Remove(configFileLocation); err != nil {
@@ -69,12 +86,12 @@ func deleteConfigFile() bool {
 	return true
 }
 
-// return the path to the config file
+// Return the path to the config file
 func getConfigFileLocation() string {
 	usr, err := user.Current()
 	if err != nil {
 		log.Fatal(err)
 	}
 	// return user's home directory plus the config file name
-	return path.Join(usr.HomeDir, configFileName)
+	return path.Join(usr.HomeDir, constants.ConfigFileName)
 }

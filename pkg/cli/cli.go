@@ -1,8 +1,14 @@
-package picli
+package cli
 
 import (
 	"bufio"
 	"fmt"
+	"github.com/Reeceeboii/Pi-CLI/pkg/api"
+	"github.com/Reeceeboii/Pi-CLI/pkg/auth"
+	"github.com/Reeceeboii/Pi-CLI/pkg/data"
+	"github.com/Reeceeboii/Pi-CLI/pkg/network"
+	"github.com/Reeceeboii/Pi-CLI/pkg/settings"
+	"github.com/Reeceeboii/Pi-CLI/pkg/ui"
 	"github.com/urfave/cli/v2"
 	"log"
 	"net"
@@ -13,13 +19,8 @@ import (
 	"time"
 )
 
-var settings = Settings{
-	PiHolePort: defaultPort,
-	RefreshS:   defaultRefreshS,
-}
-
 // set up the cli app and all of its flags
-var app = cli.App{
+var App = cli.App{
 	EnableBashCompletion: true,
 	Name:                 "Pi-CLI",
 	Usage:                "Third party program to retrieve and display Pi-Hole data right from your terminal.",
@@ -48,7 +49,7 @@ var app = cli.App{
 					if ip == nil {
 						log.Fatal("Please enter a valid IP address")
 					}
-					settings.PiHoleAddress = ip.String()
+					settings.PICLISettings.PiHoleAddress = ip.String()
 
 					// read in the port
 					fmt.Print("Please enter the port that exposes the web interface (default 80): ")
@@ -60,20 +61,23 @@ var app = cli.App{
 						if intPiHolePort < 1 || intPiHolePort > 65535 {
 							log.Fatal("Please enter a valid port number")
 						}
-						settings.PiHolePort = intPiHolePort
+						settings.PICLISettings.PiHolePort = intPiHolePort
 					}
 
 					// send a request to the PiHole to validate that the IP and port actually point to it
-					tempURL := fmt.Sprintf("http://%s:%d/admin/api.php", settings.PiHoleAddress, settings.PiHolePort)
+					tempURL := fmt.Sprintf(
+						"http://%s:%d/admin/api.php",
+						settings.PICLISettings.PiHoleAddress,
+						settings.PICLISettings.PiHolePort)
 					req, err := http.NewRequest("GET", tempURL, nil)
 					if err != nil {
 						log.Fatal(err)
 					}
-					res, err := client.Do(req)
+					res, err := network.HttpClient.Do(req)
 
 					// if the details are valid and the request didn't time out...
 					// lazy evaluation saves us from deref errors here and saves a check
-					if err == nil && validatePiHoleDetails(res) {
+					if err == nil && network.ValidatePiHoleDetails(res) {
 						addressDetailsValid = true
 					} else {
 						fmt.Println("Pi-Hole doesn't seem to be alive, check your details and try again!")
@@ -93,7 +97,7 @@ var app = cli.App{
 					if intRefreshS < 1 {
 						log.Fatal("Refresh time cannot be less than 1 second")
 					}
-					settings.RefreshS = intRefreshS
+					settings.PICLISettings.RefreshS = intRefreshS
 				}
 
 				for {
@@ -106,14 +110,16 @@ var app = cli.App{
 						continue
 					}
 
-					settings.APIKey = apiKey
+					settings.PICLISettings.APIKey = apiKey
 
 					// before we store the API token (keyring or config file), we should check that it's valid
 					// the address + port have been validated by this point so we're safe to shoot requests at it
-					piCLIData.Settings = &settings
-					piCLIData.FormattedAPIAddress = generateAPIAddress()
+					data.LivePiCLIData.Settings = settings.PICLISettings
+					data.LivePiCLIData.FormattedAPIAddress = network.GenerateAPIAddress(
+						settings.PICLISettings.PiHoleAddress,
+						settings.PICLISettings.PiHolePort)
 
-					if !validateAPIKey(settings.APIKey) {
+					if !auth.ValidateAPIKey(settings.PICLISettings.APIKey) {
 						fmt.Println("That API token doesn't seem to be correct, check it and try again!")
 					} else {
 						break
@@ -126,13 +132,13 @@ var app = cli.App{
 
 				// if they wish to use their system's keyring...
 				if storageChoice == "y" || len(storageChoice) == 0 {
-					storeAPIKeyInKeyring(settings.APIKey)
+					auth.StoreAPIKeyInKeyring(settings.PICLISettings.APIKey)
 					fmt.Println("Your API token has been securely stored in your system keyring")
 				}
 
 				// write config file to disk
 				// all fields in the settings struct would have been set by this point
-				settings.saveToFile()
+				settings.PICLISettings.SaveToFile()
 				fmt.Println("Configuration successful!")
 				return nil
 			},
@@ -147,12 +153,12 @@ var app = cli.App{
 					Aliases: []string{"d"},
 					Usage:   "Delete stored config data (config file and API key)",
 					Action: func(context *cli.Context) error {
-						if deleteAPIKeyFromKeyring() {
+						if auth.DeleteAPIKeyFromKeyring() {
 							fmt.Println("System keyring API entry has been deleted!")
 						} else {
 							fmt.Println("Pi-CLI did not find a keyring entry to delete")
 						}
-						if deleteConfigFile() {
+						if settings.DeleteConfigFile() {
 							fmt.Println("Stored config file has been deleted!")
 						} else {
 							fmt.Println("Pi-CLI did not find a config file to delete")
@@ -167,20 +173,20 @@ var app = cli.App{
 					Action: func(context *cli.Context) error {
 						// if the config file is present, that can be loaded and displayed,
 						// otherwise, prompt the user to create one
-						if configFileExists() {
-							settings.loadFromFile()
-							fmt.Printf("%s%s\n", "Pi-Hole address: ", settings.PiHoleAddress)
-							fmt.Printf("%s%d\n", "Pi-Hole port: ", settings.PiHolePort)
-							fmt.Printf("%s%d%s\n", "Refresh rate: ", settings.RefreshS, "s")
+						if settings.ConfigFileExists() {
+							settings.PICLISettings.LoadFromFile()
+							fmt.Printf("%s%s\n", "Pi-Hole address: ", settings.PICLISettings.PiHoleAddress)
+							fmt.Printf("%s%d\n", "Pi-Hole port: ", settings.PICLISettings.PiHolePort)
+							fmt.Printf("%s%d%s\n", "Refresh rate: ", settings.PICLISettings.RefreshS, "s")
 						} else {
 							fmt.Println("No config file is present - run the setup command to create one")
 						}
 
 						// and the same with the API key
-						if APIKeyIsInKeyring() {
-							fmt.Printf("%s%s\n", "API key (keyring): ", retrieveAPIKeyFromKeyring())
-						} else if settings.APIKeyIsInFile() {
-							fmt.Printf("%s%s\n", "API key (config file): ", settings.APIKey)
+						if auth.APIKeyIsInKeyring() {
+							fmt.Printf("%s%s\n", "API key (keyring): ", auth.RetrieveAPIKeyFromKeyring())
+						} else if settings.PICLISettings.APIKeyIsInFile() {
+							fmt.Printf("%s%s\n", "API key (config file): ", settings.PICLISettings.APIKey)
 						} else {
 							fmt.Println("No API key has been provided - run the setup command to enter it")
 						}
@@ -201,20 +207,20 @@ var app = cli.App{
 					Usage:   "Extract a basic summary of data from the Pi-Hole",
 					Action: func(c *cli.Context) error {
 						initialisePICLI()
-						summary.update(nil)
+						api.LiveSummary.Update(nil)
 						fmt.Printf("Summary @ %s\n", time.Now().Format(time.Stamp))
 						fmt.Println()
-						fmt.Printf("Pi-Hole status: %s\n", strings.Title(summary.Status))
+						fmt.Printf("Pi-Hole status: %s\n", strings.Title(api.LiveSummary.Status))
 						fmt.Println()
-						fmt.Printf("Queries /24hr: %s\n", summary.QueriesToday)
-						fmt.Printf("Blocked /24hr: %s\n", summary.BlockedToday)
-						fmt.Printf("Percent blocked: %s%s\n", summary.PercentBlockedToday, "%")
-						fmt.Printf("Domains on blocklist: %s\n", summary.DomainsOnBlocklist)
+						fmt.Printf("Queries /24hr: %s\n", api.LiveSummary.QueriesToday)
+						fmt.Printf("Blocked /24hr: %s\n", api.LiveSummary.BlockedToday)
+						fmt.Printf("Percent blocked: %s%s\n", api.LiveSummary.PercentBlockedToday, "%")
+						fmt.Printf("Domains on blocklist: %s\n", api.LiveSummary.DomainsOnBlocklist)
 						fmt.Printf("Privacy level: %s - %s\n",
-							summary.PrivacyLevel,
-							summary.PrivacyLevelNumberMapping[summary.PrivacyLevel],
+							api.LiveSummary.PrivacyLevel,
+							api.LiveSummary.PrivacyLevelNumberMapping[api.LiveSummary.PrivacyLevel],
 						)
-						fmt.Printf("Total clients seen: %s\n", summary.TotalClientsSeen)
+						fmt.Printf("Total clients seen: %s\n", api.LiveSummary.TotalClientsSeen)
 						fmt.Println()
 						return nil
 					},
@@ -225,9 +231,9 @@ var app = cli.App{
 					Usage:   "Extract the current top 10 permitted DNS queries",
 					Action: func(c *cli.Context) error {
 						initialisePICLI()
-						topItems.update(nil)
+						api.LiveTopItems.Update(nil)
 						fmt.Printf("Top queries as of @ %s\n\n", time.Now().Format(time.Stamp))
-						for _, q := range topItems.PrettyTopQueries {
+						for _, q := range api.LiveTopItems.PrettyTopQueries {
 							fmt.Println(q)
 						}
 						return nil
@@ -239,9 +245,9 @@ var app = cli.App{
 					Usage:   "Extract the current top 10 blocked domains",
 					Action: func(c *cli.Context) error {
 						initialisePICLI()
-						topItems.update(nil)
+						api.LiveTopItems.Update(nil)
 						fmt.Printf("Top ads as of @ %s\n\n", time.Now().Format(time.Stamp))
-						for _, q := range topItems.PrettyTopAds {
+						for _, q := range api.LiveTopItems.PrettyTopAds {
 							fmt.Println(q)
 						}
 						return nil
@@ -269,10 +275,10 @@ var app = cli.App{
 							return nil
 						}
 						initialisePICLI()
-						allQueries.AmountOfQueriesInLog = queryAmount
-						allQueries.Queries = make([]Query, allQueries.AmountOfQueriesInLog)
-						allQueries.update(nil)
-						for _, query := range allQueries.Table {
+						api.LiveAllQueries.AmountOfQueriesInLog = queryAmount
+						api.LiveAllQueries.Queries = make([]api.Query, api.LiveAllQueries.AmountOfQueriesInLog)
+						api.LiveAllQueries.Update(nil)
+						for _, query := range api.LiveAllQueries.Table {
 							fmt.Println(query)
 						}
 						return nil
@@ -284,12 +290,12 @@ var app = cli.App{
 					Usage:   "Enable the Pi-Hole",
 					Action: func(context *cli.Context) error {
 						initialisePICLI()
-						summary.update(nil)
-						if summary.Status == "enabled" {
+						api.LiveSummary.Update(nil)
+						if api.LiveSummary.Status == "enabled" {
 							fmt.Println("Pi-Hole is already enabled!")
 
 						} else {
-							enablePiHole()
+							api.EnablePiHole()
 							fmt.Println("Pi-Hole enabled!")
 						}
 
@@ -310,16 +316,16 @@ var app = cli.App{
 					},
 					Action: func(context *cli.Context) error {
 						initialisePICLI()
-						summary.update(nil)
-						if summary.Status == "disabled" {
+						api.LiveSummary.Update(nil)
+						if api.LiveSummary.Status == "disabled" {
 							fmt.Println("Pi-Hole is already disabled!")
 						} else {
 							timeout := context.Int64("timeout")
 							if timeout == 0 {
-								disablePiHole(false, 0)
+								api.DisablePiHole(false, 0)
 								fmt.Println("Pi-Hole disabled until explicitly re-enabled")
 							} else {
-								disablePiHole(true, timeout)
+								api.DisablePiHole(true, timeout)
 								fmt.Printf("Pi-Hole disabled. Will re-enable in %d seconds\n", timeout)
 							}
 						}
@@ -332,32 +338,36 @@ var app = cli.App{
 
 	Action: func(c *cli.Context) error {
 		initialisePICLI()
-		startUI()
+		ui.StartUI()
 		return nil
 	},
 }
 
-// validate that the config file and API key are in place
-// load the required data and settings into memory
+/*
+	Validate that the config file and API key are in place.
+	Load the required data and settings into memory
+*/
 func initialisePICLI() {
 	// firstly, has a config file been created?
-	if !configFileExists() {
+	if !settings.ConfigFileExists() {
 		log.Fatal("Please configure Pi-CLI via the 'setup' command")
 	}
 
-	settings.loadFromFile()
+	settings.PICLISettings.LoadFromFile()
 
 	// retrieve the API key depending upon its storage location
-	if !settings.APIKeyIsInFile() && !APIKeyIsInKeyring() {
+	if !settings.PICLISettings.APIKeyIsInFile() && !auth.APIKeyIsInKeyring() {
 		log.Fatal("Please configure Pi-CLI via the 'setup' command")
 	} else {
-		if settings.APIKeyIsInFile() {
-			piCLIData.APIKey = settings.APIKey
+		if settings.PICLISettings.APIKeyIsInFile() {
+			data.LivePiCLIData.APIKey = settings.PICLISettings.APIKey
 		} else {
-			piCLIData.APIKey = retrieveAPIKeyFromKeyring()
+			data.LivePiCLIData.APIKey = auth.RetrieveAPIKeyFromKeyring()
 		}
 	}
 
-	piCLIData.Settings = &settings
-	piCLIData.FormattedAPIAddress = generateAPIAddress()
+	data.LivePiCLIData.Settings = settings.PICLISettings
+	data.LivePiCLIData.FormattedAPIAddress = network.GenerateAPIAddress(
+		settings.PICLISettings.PiHoleAddress,
+		settings.PICLISettings.PiHolePort)
 }
