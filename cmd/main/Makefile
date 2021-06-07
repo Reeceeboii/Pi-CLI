@@ -1,37 +1,45 @@
-# parameters
+# Parameters
 GO-CMD=go
 GO-BUILD=$(GO-CMD) build
 GO-TEST=$(GO-CMD) test
 
-# binary names
+# Binary names
 WINDOWS-BINARY=picli.exe
 LINUX-BINARY=picli-linux
 MAC-BINARY=picli-mac
 
-# misc compiler flags
+# Misc. compiler flags
 REMOVE-DEBUG-FLAGS=-ldflags "-s -w"
 
-# cross compilation compiler flags
+# Cross-compilation compiler operating system flags
 GOOS-WINDOWS=GOOS=windows
 GOOS-MAC=GOOS=darwin
 GOOS-LINUX=GOOS=linux
 
-# compiling Pi-CLI for Windows
+# Compiling Pi-CLI for Windows
 win:
 	@echo "Compiling for Windows..."
 	$(GOOS-WINDOWS) $(GO-BUILD) $(REMOVE-DEBUG-FLAGS) -o $(WINDOWS-BINARY)
 
-# compiling Pi-CLI for Mac
+# Compiling for Windows *on* a Windows machine. This is required as
+# placing environment variables inline with the go compiler
+# (or any other executable for that matter), is not supported on Windows.
+# This allows compilation via PowerShell (or cmd if you're a masochist)
+win-self:
+	@echo "Compiling for Windows (on a Windows dev machine)..."
+	$(GO-BUILD) $(REMOVE-DEBUG-FLAGS) -o $(WINDOWS-BINARY)
+
+# Compiling Pi-CLI for Mac
 mac:
 	@echo "Compiling for Mac..."
 	$(GOOS-MAC) $(GO-BUILD) $(REMOVE-DEBUG-FLAGS) -o $(MAC-BINARY)
 
-# compiling Pi-CLI for Linux
+# Compiling Pi-CLI for Linux
 linux:
 	@echo "Compiling for Linux..."
 	$(GOOS-LINUX) $(GO-BUILD) $(REMOVE-DEBUG-FLAGS) -o $(LINUX-BINARY)
 
-# clean up
+# Clean up
 clean:
 	@echo "Cleaning up..."
 	@rm ./picli
