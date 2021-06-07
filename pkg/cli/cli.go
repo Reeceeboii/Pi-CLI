@@ -6,6 +6,7 @@ import (
 	"github.com/Reeceeboii/Pi-CLI/pkg/api"
 	"github.com/Reeceeboii/Pi-CLI/pkg/auth"
 	"github.com/Reeceeboii/Pi-CLI/pkg/data"
+	"github.com/Reeceeboii/Pi-CLI/pkg/database"
 	"github.com/Reeceeboii/Pi-CLI/pkg/network"
 	"github.com/Reeceeboii/Pi-CLI/pkg/settings"
 	"github.com/Reeceeboii/Pi-CLI/pkg/ui"
@@ -329,6 +330,61 @@ var App = cli.App{
 								fmt.Printf("Pi-Hole disabled. Will re-enable in %d seconds\n", timeout)
 							}
 						}
+						return nil
+					},
+				},
+			},
+		},
+		{
+			Name:    "database",
+			Aliases: []string{"d"},
+			Usage:   "Analytics options to run on a Pi-Hole's FTL database",
+			Subcommands: []*cli.Command{
+				{
+					Name:    "client-summary",
+					Aliases: []string{"cs"},
+					Usage:   "Summary of all Pi-Hole clients",
+					Flags: []cli.Flag{
+						&cli.StringFlag{
+							Name:     "path",
+							Aliases:  []string{"p"},
+							Usage:    "Path to the Pi-Hole FTL database file",
+							Required: true,
+						},
+					},
+					Action: func(c *cli.Context) error {
+						conn := database.Connect(c.String("path"))
+						database.ClientSummary(conn)
+						return nil
+					},
+				},
+				{
+					Name:    "top-queries",
+					Aliases: []string{"tq"},
+					Usage:   "Returns the top (all time) queries",
+					Flags: []cli.Flag{
+						&cli.StringFlag{
+							Name:     "path",
+							Aliases:  []string{"p"},
+							Usage:    "Path to the Pi-Hole FTL database file",
+							Required: true,
+						},
+						&cli.Int64Flag{
+							Name:        "limit",
+							Aliases:     []string{"l"},
+							Usage:       "The limit on the number of queries to extract",
+							DefaultText: "10",
+						},
+					},
+					Action: func(c *cli.Context) error {
+						conn := database.Connect(c.String("path"))
+
+						limit := c.Int64("limit")
+						if limit == 0 {
+							limit = 10
+						}
+
+						database.TopQueries(conn, limit)
 						return nil
 					},
 				},

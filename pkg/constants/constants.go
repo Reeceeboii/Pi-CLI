@@ -18,6 +18,11 @@ const (
 	KeyringUsr     = "api-key"
 )
 
+// Database constants
+const (
+	DBDriverName = "sqlite3"
+)
+
 // Keys that can be used to index JSON responses from the Pi-Hole's API
 const (
 	// Summary
