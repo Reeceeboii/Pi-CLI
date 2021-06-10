@@ -3,6 +3,8 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 	"log"
 )
 
@@ -37,12 +39,13 @@ func TopQueries(db *sql.DB, limit int64) {
 
 	var occurrenceSum uint64
 
-	writer := NewConfiguredTabWriter(1)
+	tabWriter := NewConfiguredTabWriter(1)
+	localisedNumberWriter := message.NewPrinter(language.English)
 
 	// insert column headers
-	_, _ = fmt.Fprintln(writer, "Domain\t", "Occurrences\t")
+	_, _ = fmt.Fprintln(tabWriter, "Domain\t", "Occurrences\t")
 	// insert blank line separator
-	_, _ = fmt.Fprintln(writer, "\t", "\t")
+	_, _ = fmt.Fprintln(tabWriter, "\t", "\t")
 
 	for rows.Next() {
 		_ = rows.Scan(&domain, &occurrence)
@@ -50,20 +53,23 @@ func TopQueries(db *sql.DB, limit int64) {
 		occurrenceSum = occurrenceSum + uint64(occurrence)
 
 		_, _ = fmt.Fprintln(
-			writer,
+			tabWriter,
 			fmt.Sprintf("%s\t", domain),
-			fmt.Sprintf("%d\t", occurrence))
+			fmt.Sprintf("%s\t", localisedNumberWriter.Sprintf("%d", occurrence)))
 	}
 
 	// insert blank line separator
-	_, _ = fmt.Fprintln(writer, "\t", "\t")
+	_, _ = fmt.Fprintln(tabWriter, "\t", "\t")
 	// insert column headers
-	_, _ = fmt.Fprintln(writer, "\t", "Total\t")
+	_, _ = fmt.Fprintln(tabWriter, "\t", "Total\t")
 
 	// insert the total of the occurrences
-	_, _ = fmt.Fprintln(writer, "\t", fmt.Sprintf("%d\t", occurrenceSum))
+	_, _ = fmt.Fprintln(
+		tabWriter,
+		"\t",
+		fmt.Sprintf("%s\t", localisedNumberWriter.Sprintf("%d", occurrenceSum)))
 
-	if err := writer.Flush(); err != nil {
+	if err := tabWriter.Flush(); err != nil {
 		return
 	}
 }

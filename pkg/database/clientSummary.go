@@ -3,6 +3,8 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 	"log"
 	"strings"
 )
@@ -42,11 +44,12 @@ func ClientSummary(db *sql.DB) {
 	var numQueries int
 	var name string
 
-	writer := NewConfiguredTabWriter(1)
+	tabWriter := NewConfiguredTabWriter(1)
+	localisedNumberWriter := message.NewPrinter(language.English)
 
 	// insert column headers
 	_, _ = fmt.Fprintln(
-		writer,
+		tabWriter,
 		"Address\t",
 		"First seen\t",
 		"Last query\t",
@@ -54,7 +57,7 @@ func ClientSummary(db *sql.DB) {
 		"DNS\t")
 
 	// insert blank line separator
-	_, _ = fmt.Fprintln(writer, "\t", "\t", "\t", "\t", "\t")
+	_, _ = fmt.Fprintln(tabWriter, "\t", "\t", "\t", "\t", "\t")
 
 	// print out each row from the query results
 	for rows.Next() {
@@ -66,15 +69,15 @@ func ClientSummary(db *sql.DB) {
 		}
 
 		_, _ = fmt.Fprintln(
-			writer,
+			tabWriter,
 			fmt.Sprintf("%s\t", address),
 			fmt.Sprintf("%s\t", FormattedDBUnixTimestamp(firstSeen)),
 			fmt.Sprintf("%s\t", FormattedDBUnixTimestamp(lastQuery)),
-			fmt.Sprintf("%d\t", numQueries),
+			fmt.Sprintf("%s\t", localisedNumberWriter.Sprintf("%d", numQueries)),
 			fmt.Sprintf("%s\t", name))
 	}
 
-	if err := writer.Flush(); err != nil {
+	if err := tabWriter.Flush(); err != nil {
 		return
 	}
 }

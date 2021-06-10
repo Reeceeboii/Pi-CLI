@@ -10,6 +10,7 @@ import (
 	"github.com/Reeceeboii/Pi-CLI/pkg/network"
 	"github.com/Reeceeboii/Pi-CLI/pkg/settings"
 	"github.com/Reeceeboii/Pi-CLI/pkg/ui"
+	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 	"log"
 	"net"
@@ -38,7 +39,7 @@ var App = cli.App{
 			Aliases: []string{"s"},
 			Usage:   "Configure Pi-CLI",
 			// read in information from the user and create a config file with it
-			Action: func(c *cli.Context) error {
+			Action: func(context *cli.Context) error {
 				reader := bufio.NewReader(os.Stdin)
 
 				addressDetailsValid := false
@@ -81,7 +82,7 @@ var App = cli.App{
 					if err == nil && network.ValidatePiHoleDetails(res) {
 						addressDetailsValid = true
 					} else {
-						fmt.Println("Pi-Hole doesn't seem to be alive, check your details and try again!")
+						color.Yellow("Pi-Hole doesn't seem to be alive, check your details and try again!")
 						fmt.Println()
 					}
 				}
@@ -121,7 +122,7 @@ var App = cli.App{
 						settings.PICLISettings.PiHolePort)
 
 					if !auth.ValidateAPIKey(settings.PICLISettings.APIKey) {
-						fmt.Println("That API token doesn't seem to be correct, check it and try again!")
+						color.Yellow("That API token doesn't seem to be correct, check it and try again!")
 					} else {
 						break
 					}
@@ -133,14 +134,25 @@ var App = cli.App{
 
 				// if they wish to use their system's keyring...
 				if storageChoice == "y" || len(storageChoice) == 0 {
-					auth.StoreAPIKeyInKeyring(settings.PICLISettings.APIKey)
-					fmt.Println("Your API token has been securely stored in your system keyring")
+					err := auth.StoreAPIKeyInKeyring(settings.PICLISettings.APIKey)
+
+					if err == nil {
+						color.Green("Your API token has been securely stored in your system keyring")
+						/*
+							After the API key has been saved to the keyring, there is no longer a need to save it
+							to the config file, so the stored copy of it can be removed from the in-memory settings
+							instance before it gets serialised to disk
+						*/
+						settings.PICLISettings.APIKey = ""
+					} else {
+						color.Yellow("System keyring call failed, falling back to config file")
+					}
 				}
 
 				// write config file to disk
 				// all fields in the settings struct would have been set by this point
 				settings.PICLISettings.SaveToFile()
-				fmt.Println("Configuration successful!")
+				color.Green("Configuration successful")
 				return nil
 			},
 		},
@@ -155,14 +167,14 @@ var App = cli.App{
 					Usage:   "Delete stored config data (config file and API key)",
 					Action: func(context *cli.Context) error {
 						if auth.DeleteAPIKeyFromKeyring() {
-							fmt.Println("System keyring API entry has been deleted!")
+							color.Green("System keyring API entry has been deleted!")
 						} else {
-							fmt.Println("Pi-CLI did not find a keyring entry to delete")
+							color.Yellow("Pi-CLI did not find a keyring entry to delete")
 						}
 						if settings.DeleteConfigFile() {
-							fmt.Println("Stored config file has been deleted!")
+							color.Green("Stored config file has been deleted!")
 						} else {
-							fmt.Println("Pi-CLI did not find a config file to delete")
+							color.Yellow("Pi-CLI did not find a config file to delete")
 						}
 						return nil
 					},
@@ -176,11 +188,24 @@ var App = cli.App{
 						// otherwise, prompt the user to create one
 						if settings.ConfigFileExists() {
 							settings.PICLISettings.LoadFromFile()
-							fmt.Printf("%s%s\n", "Pi-Hole address: ", settings.PICLISettings.PiHoleAddress)
-							fmt.Printf("%s%d\n", "Pi-Hole port: ", settings.PICLISettings.PiHolePort)
-							fmt.Printf("%s%d%s\n", "Refresh rate: ", settings.PICLISettings.RefreshS, "s")
+							fmt.Printf(
+								"%s%s\n",
+								"Pi-Hole address: ",
+								settings.PICLISettings.PiHoleAddress)
+							fmt.Printf(
+								"%s%d\n",
+								"Pi-Hole port: ",
+								settings.PICLISettings.PiHolePort)
+							fmt.Printf("%s%d%s\n",
+								"Refresh rate: ",
+								settings.PICLISettings.RefreshS,
+								"s")
+							fmt.Printf("%s%d%s\n",
+								"UI framerate: ",
+								settings.PICLISettings.UIFramesPerSecond,
+								"fps")
 						} else {
-							fmt.Println("No config file is present - run the setup command to create one")
+							color.Yellow("No config file is present - run the setup command to create one")
 						}
 
 						// and the same with the API key
@@ -189,7 +214,7 @@ var App = cli.App{
 						} else if settings.PICLISettings.APIKeyIsInFile() {
 							fmt.Printf("%s%s\n", "API key (config file): ", settings.PICLISettings.APIKey)
 						} else {
-							fmt.Println("No API key has been provided - run the setup command to enter it")
+							color.Yellow("No API key has been provided - run the setup command to enter it")
 						}
 
 						return nil
@@ -206,7 +231,7 @@ var App = cli.App{
 					Name:    "summary",
 					Aliases: []string{"s"},
 					Usage:   "Extract a basic summary of data from the Pi-Hole",
-					Action: func(c *cli.Context) error {
+					Action: func(context *cli.Context) error {
 						initialisePICLI()
 						api.LiveSummary.Update(nil)
 						fmt.Printf("Summary @ %s\n", time.Now().Format(time.Stamp))
@@ -230,7 +255,7 @@ var App = cli.App{
 					Name:    "top-queries",
 					Aliases: []string{"tq"},
 					Usage:   "Extract the current top 10 permitted DNS queries",
-					Action: func(c *cli.Context) error {
+					Action: func(context *cli.Context) error {
 						initialisePICLI()
 						api.LiveTopItems.Update(nil)
 						fmt.Printf("Top queries as of @ %s\n\n", time.Now().Format(time.Stamp))
@@ -352,8 +377,8 @@ var App = cli.App{
 							Required: true,
 						},
 					},
-					Action: func(c *cli.Context) error {
-						conn := database.Connect(c.String("path"))
+					Action: func(context *cli.Context) error {
+						conn := database.Connect(context.String("path"))
 						database.ClientSummary(conn)
 						return nil
 					},
@@ -376,10 +401,10 @@ var App = cli.App{
 							DefaultText: "10",
 						},
 					},
-					Action: func(c *cli.Context) error {
-						conn := database.Connect(c.String("path"))
+					Action: func(context *cli.Context) error {
+						conn := database.Connect(context.String("path"))
 
-						limit := c.Int64("limit")
+						limit := context.Int64("limit")
 						if limit == 0 {
 							limit = 10
 						}
@@ -392,7 +417,7 @@ var App = cli.App{
 		},
 	},
 
-	Action: func(c *cli.Context) error {
+	Action: func(context *cli.Context) error {
 		initialisePICLI()
 		ui.StartUI()
 		return nil

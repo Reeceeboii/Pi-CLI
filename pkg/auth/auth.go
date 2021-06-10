@@ -20,11 +20,14 @@ func RetrieveAPIKeyFromKeyring() string {
 	return APIKey
 }
 
-// Store the API key in the system keyring
-func StoreAPIKeyInKeyring(key string) {
+/*
+	Store the API key in the system keyring. Returns an error if this action failed.
+*/
+func StoreAPIKeyInKeyring(key string) error {
 	if err := keyring.Set(constants.KeyringService, constants.KeyringUsr, key); err != nil {
-		log.Fatal(err)
+		return err
 	}
+	return nil
 }
 
 // Delete the stored API key if it exists

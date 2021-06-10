@@ -10,6 +10,8 @@ const (
 	ConfigFileName = "picli-config.json"
 	// The starting setting for the number of queries that are included in the live log
 	DefaultAmountOfQueries = 10
+	// The default refresh rate for the UI
+	DefaultUIFramesPerSecond = 30
 )
 
 // Constant values required for use in authentication and API key management

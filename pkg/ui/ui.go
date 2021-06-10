@@ -34,6 +34,15 @@ func getPrivacyLevel(level *string) string {
 	return api.LiveSummary.PrivacyLevelNumberMapping[*level]
 }
 
+/*
+	Is the UI free to draw to? Currently this only takes into account the fact
+	that the keybinds view may be showing. Adding more conditions for halting live
+	UI redraws is as simple as ANDing them here
+*/
+func uiCanDraw() bool {
+	return !data.LivePiCLIData.ShowKeybindsScreen
+}
+
 // Create the UI and start rendering
 func StartUI() {
 	if err := ui.Init(); err != nil {
@@ -131,7 +140,7 @@ func StartUI() {
 	)
 
 	draw := func() {
-		if !data.LivePiCLIData.ShowKeybindsScreen {
+		if uiCanDraw() {
 			// 4 top summary boxes
 			totalQueries.Text = api.LiveSummary.QueriesToday
 			queriesBlocked.Text = api.LiveSummary.BlockedToday
@@ -173,8 +182,7 @@ func StartUI() {
 	dataUpdateTicker := time.NewTicker(time.Second * tickerDuration).C
 
 	// channel used to capture ticker events to time redraws
-	// ticker event triggered every 33.3ms (30fps) or redraws per second if you want to be pedantic
-	drawTicker := time.NewTicker(time.Second / 30).C
+	drawTicker := time.NewTicker(time.Second / time.Duration(data.LivePiCLIData.Settings.UIFramesPerSecond)).C
 
 	updateData()
 	draw()
@@ -190,7 +198,7 @@ func StartUI() {
 			// respond to terminal resize events
 			case "<Resize>":
 				payload := e.Payload.(ui.Resize)
-				if !data.LivePiCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					grid.SetRect(0, 0, payload.Width, payload.Height)
 					ui.Render(grid)
 					break
@@ -202,7 +210,7 @@ func StartUI() {
 
 			// increase (by 1) the number of queries in the query log
 			case "e":
-				if !data.LivePiCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					api.LiveAllQueries.AmountOfQueriesInLog++
 					api.LiveAllQueries.Queries = append(api.LiveAllQueries.Queries, api.Query{})
 				}
@@ -210,7 +218,7 @@ func StartUI() {
 
 			// increase (by 10) the number of queries in the query log
 			case "r":
-				if !data.LivePiCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					api.LiveAllQueries.AmountOfQueriesInLog += 10
 					api.LiveAllQueries.Queries = append(api.LiveAllQueries.Queries, make([]api.Query, 10)...)
 				}
@@ -218,7 +226,7 @@ func StartUI() {
 
 			// decrease (by 1) the number of queries in the query log
 			case "d":
-				if !data.LivePiCLIData.ShowKeybindsScreen && api.LiveAllQueries.AmountOfQueriesInLog > 1 {
+				if uiCanDraw() && api.LiveAllQueries.AmountOfQueriesInLog > 1 {
 					api.LiveAllQueries.AmountOfQueriesInLog--
 					api.LiveAllQueries.Queries = api.LiveAllQueries.Queries[:len(api.LiveAllQueries.Queries)-1]
 				}
@@ -226,7 +234,7 @@ func StartUI() {
 
 			// decrease (by 10) the number of queries in the query log
 			case "f":
-				if !data.LivePiCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					if api.LiveAllQueries.AmountOfQueriesInLog-10 <= 0 {
 						api.LiveAllQueries.AmountOfQueriesInLog = 1
 						api.LiveAllQueries.Queries =
@@ -240,35 +248,35 @@ func StartUI() {
 
 			// scroll down (by 1) in the query log list
 			case "<Down>":
-				if !data.LivePiCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					queryLog.ScrollDown()
 				}
 				break
 
 			// scroll down (by 10) in the query log list
 			case "<PageDown>":
-				if !data.LivePiCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					queryLog.ScrollAmount(10)
 				}
 				break
 
 			// scroll up (by 1) in the query log list
 			case "<Up>":
-				if !data.LivePiCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					queryLog.ScrollUp()
 				}
 				break
 
 			// scroll up (by 10) in the query log list
 			case "<PageUp>":
-				if !data.LivePiCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					queryLog.ScrollAmount(-10)
 				}
 				break
 
 			// enable or disable the Pi-Hole
 			case "p":
-				if !data.LivePiCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					if api.LiveSummary.Status == "enabled" {
 						api.DisablePiHole(false, 0)
 					} else {
@@ -293,7 +301,7 @@ func StartUI() {
 		// refresh event used to time API polls for up to date data
 		case <-dataUpdateTicker:
 			// there's only a need to make API calls when the keybinds screen isn't being shown
-			if !data.LivePiCLIData.ShowKeybindsScreen {
+			if uiCanDraw() {
 				updateData()
 			}
 			break
