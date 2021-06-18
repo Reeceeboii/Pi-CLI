@@ -38,9 +38,3 @@ mac:
 linux:
 	@echo "Compiling for Linux..."
 	$(GOOS-LINUX) $(GO-BUILD) $(REMOVE-DEBUG-FLAGS) -o $(LINUX-BINARY)
-
-# Clean up
-clean:
-	@echo "Cleaning up..."
-	@rm ./picli
-	@rm ./picli.exe
