@@ -25,7 +25,7 @@ import (
 var App = cli.App{
 	EnableBashCompletion: true,
 	Name:                 "Pi-CLI",
-	Usage:                "Third party program to retrieve and display Pi-Hole data right from your terminal.",
+	Description:          `Pi-Hole data right from your terminal. Live updating view, query history extraction and more!`,
 	Compiled:             time.Now(),
 	Authors: []*cli.Author{
 		{
@@ -200,10 +200,6 @@ var App = cli.App{
 								"Refresh rate: ",
 								settings.PICLISettings.RefreshS,
 								"s")
-							fmt.Printf("%s%d%s\n",
-								"UI framerate: ",
-								settings.PICLISettings.UIFramesPerSecond,
-								"fps")
 						} else {
 							color.Yellow("No config file is present - run the setup command to create one")
 						}
@@ -371,14 +367,19 @@ var App = cli.App{
 					Usage:   "Summary of all Pi-Hole clients",
 					Flags: []cli.Flag{
 						&cli.StringFlag{
-							Name:     "path",
-							Aliases:  []string{"p"},
-							Usage:    "Path to the Pi-Hole FTL database file",
-							Required: true,
+							Name:        "path",
+							Aliases:     []string{"p"},
+							Usage:       "Path to the Pi-Hole FTL database file",
+							DefaultText: "./pihole-FTL.db",
 						},
 					},
 					Action: func(context *cli.Context) error {
-						conn := database.Connect(context.String("path"))
+						path := context.String("path")
+						if path == "" {
+							path = "./pihole-FTL.db"
+						}
+
+						conn := database.Connect(path)
 						database.ClientSummary(conn)
 						return nil
 					},
@@ -389,10 +390,10 @@ var App = cli.App{
 					Usage:   "Returns the top (all time) queries",
 					Flags: []cli.Flag{
 						&cli.StringFlag{
-							Name:     "path",
-							Aliases:  []string{"p"},
-							Usage:    "Path to the Pi-Hole FTL database file",
-							Required: true,
+							Name:        "path",
+							Aliases:     []string{"p"},
+							Usage:       "Path to the Pi-Hole FTL database file",
+							DefaultText: "./pihole-FTL.db",
 						},
 						&cli.Int64Flag{
 							Name:        "limit",
@@ -400,16 +401,27 @@ var App = cli.App{
 							Usage:       "The limit on the number of queries to extract",
 							DefaultText: "10",
 						},
+						&cli.StringFlag{
+							Name:        "filter",
+							Aliases:     []string{"f"},
+							Usage:       "Filter by domain or word. (e.g. 'google.com', 'spotify', 'adservice' etc...)",
+							DefaultText: "No filter",
+						},
 					},
 					Action: func(context *cli.Context) error {
-						conn := database.Connect(context.String("path"))
+						path := context.String("path")
+						if path == "" {
+							path = "./pihole-FTL.db"
+						}
+
+						conn := database.Connect(path)
 
 						limit := context.Int64("limit")
 						if limit == 0 {
 							limit = 10
 						}
 
-						database.TopQueries(conn, limit)
+						database.TopQueries(conn, limit, context.String("filter"))
 						return nil
 					},
 				},

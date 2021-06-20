@@ -50,6 +50,7 @@ func ClientSummary(db *sql.DB) {
 	// insert column headers
 	_, _ = fmt.Fprintln(
 		tabWriter,
+		"#\t",
 		"Address\t",
 		"First seen\t",
 		"Last query\t",
@@ -57,7 +58,9 @@ func ClientSummary(db *sql.DB) {
 		"DNS\t")
 
 	// insert blank line separator
-	_, _ = fmt.Fprintln(tabWriter, "\t", "\t", "\t", "\t", "\t")
+	_, _ = fmt.Fprintln(tabWriter, "\t", "\t", "\t", "\t", "\t", "\t")
+
+	row := 1
 
 	// print out each row from the query results
 	for rows.Next() {
@@ -70,11 +73,13 @@ func ClientSummary(db *sql.DB) {
 
 		_, _ = fmt.Fprintln(
 			tabWriter,
+			fmt.Sprintf("%d\t", row),
 			fmt.Sprintf("%s\t", address),
 			fmt.Sprintf("%s\t", FormattedDBUnixTimestamp(firstSeen)),
 			fmt.Sprintf("%s\t", FormattedDBUnixTimestamp(lastQuery)),
 			fmt.Sprintf("%s\t", localisedNumberWriter.Sprintf("%d", numQueries)),
 			fmt.Sprintf("%s\t", name))
+		row++
 	}
 
 	if err := tabWriter.Flush(); err != nil {

@@ -24,8 +24,6 @@ type Settings struct {
 	RefreshS int `json:"refresh_s"`
 	// API key used to authenticate with the Pi-Hole instance
 	APIKey string `json:"api_key"`
-	// How many times the UI should refresh per second
-	UIFramesPerSecond int `json:"ui_frames_per_second"`
 }
 
 // Generate the location of the config file (or at least where it should be)
@@ -40,11 +38,10 @@ func ConfigFileExists() bool {
 // Return a new Settings instance
 func NewSettings() *Settings {
 	return &Settings{
-		PiHoleAddress:     "",
-		PiHolePort:        constants.DefaultPort,
-		RefreshS:          constants.DefaultRefreshS,
-		APIKey:            "",
-		UIFramesPerSecond: constants.DefaultUIFramesPerSecond,
+		PiHoleAddress: "",
+		PiHolePort:    constants.DefaultPort,
+		RefreshS:      constants.DefaultRefreshS,
+		APIKey:        "",
 	}
 }
 

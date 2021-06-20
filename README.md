@@ -38,6 +38,7 @@ For help, run `~$ ./picli -h`
 ```
 
 ### The `config` command
+*Manage stored config data*
 ```
    delete, d  Delete stored config data (config file and API key)
    view, v    View config stored config data (config file and API key)
@@ -45,6 +46,7 @@ For help, run `~$ ./picli -h`
 ```
 
 ### The `run` command
+*Run a single command without the live view*
 ```
    summary, s          Extract a basic summary of data from the Pi-Hole
    top-queries, tq     Extract the current top 10 permitted DNS queries
@@ -56,6 +58,7 @@ For help, run `~$ ./picli -h`
 ```
 
 ### The `database` command
+*These commands are ran against a Pi-Hole's FTL database file and provide **all time** data metrics*
 ```
    client-summary, cs  Summary of all Pi-Hole clients
    top-queries, tq     Returns the top (all time) queries

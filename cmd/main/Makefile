@@ -25,6 +25,10 @@ win:
 # placing environment variables inline with the go compiler
 # (or any other executable for that matter), is not supported on Windows.
 # This allows compilation via PowerShell (or cmd if you're a masochist)
+# ------------
+# As an aside, the Linux and Mac compilation options can be ran from a windows host by passing the make command
+# through to WSL first.
+# I.e. `wsl make mac` will allow the prefixed args to work as expected.
 win-self:
 	@echo "Compiling for Windows (on a Windows dev machine)..."
 	$(GO-BUILD) $(REMOVE-DEBUG-FLAGS) -o $(WINDOWS-BINARY)

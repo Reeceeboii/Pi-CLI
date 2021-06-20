@@ -181,8 +181,8 @@ func StartUI() {
 	tickerDuration := time.Duration(data.LivePiCLIData.Settings.RefreshS)
 	dataUpdateTicker := time.NewTicker(time.Second * tickerDuration).C
 
-	// channel used to capture ticker events to time redraws
-	drawTicker := time.NewTicker(time.Second / time.Duration(data.LivePiCLIData.Settings.UIFramesPerSecond)).C
+	// channel used to capture ticker events to time redraws (30fps)
+	drawTicker := time.NewTicker(time.Second / 30).C
 
 	updateData()
 	draw()
