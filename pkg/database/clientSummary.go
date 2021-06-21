@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"github.com/fatih/color"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"log"
@@ -80,6 +81,11 @@ func ClientSummary(db *sql.DB) {
 			fmt.Sprintf("%s\t", localisedNumberWriter.Sprintf("%d", numQueries)),
 			fmt.Sprintf("%s\t", name))
 		row++
+	}
+
+	// if the row counter has never been incremented, the database query returned zero results
+	if row == 1 {
+		color.Red("0 results in database")
 	}
 
 	if err := tabWriter.Flush(); err != nil {

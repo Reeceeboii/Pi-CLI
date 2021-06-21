@@ -3,10 +3,12 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"github.com/Reeceeboii/Pi-CLI/pkg/constants"
 	"github.com/fatih/color"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"log"
+	"math"
 )
 
 /*
@@ -14,7 +16,10 @@ import (
 	blocked queries. The only factor in ordering/appearance is the number of times that
 	a query for that domain has hit the Pi-Hole.
 
-	This query is parameterised on the limit, the user can choose how many top queries
+	An optional filter parameter can be provided that can filter down returned results to
+	those belonging to a certain domain, or those that contain a certain word.
+
+	This query is also parameterised on a limit, the user can choose how many top queries
 	they want returned (i.e. top 10, top 20 etc...).
 
 	This database dump includes:
@@ -23,10 +28,24 @@ import (
 		- A total sum of all of the occurrences
 */
 func TopQueries(db *sql.DB, limit int64, domainFilter string) {
-	color.Yellow("\nLimit: %d | Filter: '%s' \n\n", limit, domainFilter)
-
 	var rows *sql.Rows
 	var err error
+
+	/*
+		If any <0 integer is given, default to the max int64 value to essentially remove the limit.
+		If zero is provided, revert to the default of 10, else we can go with the user's provided limit
+	*/
+	if limit < 0 {
+		limit = math.MaxInt64
+		color.Yellow("Limit: unlimited")
+	} else if limit == 0 {
+		limit = constants.DefaultQueryTableLimit
+		color.Yellow("Limit: %d", constants.DefaultQueryTableLimit)
+	} else {
+		color.Yellow("Limit: %d", limit)
+	}
+
+	color.Yellow("Filter: '%s' \n\n", domainFilter)
 
 	// if filter has been provided, we want to plug it into the SQL query
 	if domainFilter == "" {

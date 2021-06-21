@@ -25,7 +25,8 @@ import (
 var App = cli.App{
 	EnableBashCompletion: true,
 	Name:                 "Pi-CLI",
-	Description:          `Pi-Hole data right from your terminal. Live updating view, query history extraction and more!`,
+	Description:          "Pi-Hole data right from your terminal. Live updating view, query history extraction and more!",
+	Copyright:            fmt.Sprintf("Copyright (c) %d Reece Mercer", time.Now().Year()),
 	Compiled:             time.Now(),
 	Authors: []*cli.Author{
 		{
@@ -360,6 +361,13 @@ var App = cli.App{
 			Name:    "database",
 			Aliases: []string{"d"},
 			Usage:   "Analytics options to run on a Pi-Hole's FTL database",
+
+			/*
+				FOR ALL DATABASE COMMANDS:
+					If no path is provided by the user, Pi-CLI will assume that the database file's
+					name hasn't been changed from it's default name, and that is has been placed in the
+					same working directory that it is being executed from. This saves some command typing.
+			*/
 			Subcommands: []*cli.Command{
 				{
 					Name:    "client-summary",
@@ -404,7 +412,7 @@ var App = cli.App{
 						&cli.StringFlag{
 							Name:        "filter",
 							Aliases:     []string{"f"},
-							Usage:       "Filter by domain or word. (e.g. 'google.com', 'spotify', 'adservice' etc...)",
+							Usage:       "Filter by domain or word. (e.g. 'google.com', 'spotify', 'facebook' etc...)",
 							DefaultText: "No filter",
 						},
 					},
@@ -416,12 +424,8 @@ var App = cli.App{
 
 						conn := database.Connect(path)
 
-						limit := context.Int64("limit")
-						if limit == 0 {
-							limit = 10
-						}
+						database.TopQueries(conn, context.Int64("limit"), context.String("filter"))
 
-						database.TopQueries(conn, limit, context.String("filter"))
 						return nil
 					},
 				},

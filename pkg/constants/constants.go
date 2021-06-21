@@ -14,13 +14,18 @@ const (
 
 // Constant values required for use in authentication and API key management
 const (
+	// Keyring service
 	KeyringService = "PiCLI"
-	KeyringUsr     = "api-key"
+	// Keyring user
+	KeyringUsr = "api-key"
 )
 
 // Database constants
 const (
+	// The name of the database driver to use
 	DBDriverName = "sqlite3"
+	// The default limit on the number of queries returned from some database queries
+	DefaultQueryTableLimit = 10
 )
 
 // Keys that can be used to index JSON responses from the Pi-Hole's API
