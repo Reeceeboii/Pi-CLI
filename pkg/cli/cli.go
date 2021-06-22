@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/Reeceeboii/Pi-CLI/pkg/database"
 	"github.com/Reeceeboii/Pi-CLI/pkg/ui"
 	"github.com/urfave/cli/v2"
 	"time"
@@ -77,9 +78,9 @@ var App = cli.App{
 					Usage:   "Extract the latest queries",
 					Flags: []cli.Flag{
 						&cli.Int64Flag{
-							Name:        "queries",
-							Aliases:     []string{"q"},
-							Usage:       "The number of queries to extract",
+							Name:        "limit",
+							Aliases:     []string{"l"},
+							Usage:       "The limit on the number of queries to extract",
 							DefaultText: "10",
 						},
 					},
@@ -121,7 +122,7 @@ var App = cli.App{
 							Name:        "path",
 							Aliases:     []string{"p"},
 							Usage:       "Path to a Pi-Hole FTL database file",
-							DefaultText: "./pihole-FTL.db",
+							DefaultText: database.DefaultDatabaseFileLocation,
 						},
 					},
 					Action: RunDatabaseClientSummaryCommand,
@@ -135,7 +136,7 @@ var App = cli.App{
 							Name:        "path",
 							Aliases:     []string{"p"},
 							Usage:       "Path to the Pi-Hole FTL database file",
-							DefaultText: "./pihole-FTL.db",
+							DefaultText: database.DefaultDatabaseFileLocation,
 						},
 						&cli.Int64Flag{
 							Name:        "limit",
@@ -150,7 +151,7 @@ var App = cli.App{
 							DefaultText: "No filter",
 						},
 					},
-					Action: RunDatabaseClientSummaryCommand,
+					Action: RunDatabaseTopQueriesCommand,
 				},
 			},
 		},

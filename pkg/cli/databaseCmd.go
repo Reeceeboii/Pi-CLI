@@ -18,7 +18,7 @@ import (
 func RunDatabaseClientSummaryCommand(c *cli.Context) error {
 	path := c.String("path")
 	if path == "" {
-		path = "./pihole-FTL.db"
+		path = database.DefaultDatabaseFileLocation
 	}
 
 	conn := database.Connect(path)
@@ -33,7 +33,7 @@ func RunDatabaseClientSummaryCommand(c *cli.Context) error {
 func RunDatabaseTopQueriesCommand(c *cli.Context) error {
 	path := c.String("path")
 	if path == "" {
-		path = "./pihole-FTL.db"
+		path = database.DefaultDatabaseFileLocation
 	}
 
 	conn := database.Connect(path)

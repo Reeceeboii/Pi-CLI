@@ -74,7 +74,7 @@ func RunTopTenBlockedCommand(*cli.Context) error {
 }
 
 func RunLatestQueriesCommand(c *cli.Context) error {
-	queryAmount := c.Int("queries")
+	queryAmount := c.Int("limit")
 	if queryAmount == 0 {
 		queryAmount = 10
 	}
