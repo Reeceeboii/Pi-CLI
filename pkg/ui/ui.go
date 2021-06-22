@@ -1,7 +1,9 @@
-package main
+package ui
 
 import (
 	"fmt"
+	"github.com/Reeceeboii/Pi-CLI/pkg/api"
+	"github.com/Reeceeboii/Pi-CLI/pkg/data"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 	"log"
@@ -12,24 +14,37 @@ import (
 
 var wg sync.WaitGroup
 
-// update data so it can be displayed
-// this function makes calls to the Pi-Hole's API
+/*
+	Update data so it can be displayed.
+	This function makes calls to the Pi-Hole's API
+*/
 func updateData() {
-	go summary.update(&wg)
-	go topItems.update(&wg)
-	go allQueries.update(&wg)
+	go api.LiveSummary.Update(&wg)
+	go api.LiveTopItems.Update(&wg)
+	go api.LiveAllQueries.Update(&wg)
 	wg.Wait()
-	piCLIData.LastUpdated = time.Now()
+	data.LivePiCLIData.LastUpdated = time.Now()
 }
 
-// given a value representing the current privacy level, return the level name
-// https://docs.pi-hole.net/ftldns/privacylevels/
+/*
+	Given a value representing the current privacy level, return the level name.
+	https://docs.pi-hole.net/ftldns/privacylevels/
+*/
 func getPrivacyLevel(level *string) string {
-	return summary.PrivacyLevelNumberMapping[*level]
+	return api.LiveSummary.PrivacyLevelNumberMapping[*level]
 }
 
-// create and start the UI rendering
-func startUI() {
+/*
+	Is the UI free to draw to? Currently this only takes into account the fact
+	that the keybinds view may be showing. Adding more conditions for halting live
+	UI redraws is as simple as ANDing them here
+*/
+func uiCanDraw() bool {
+	return !data.LivePiCLIData.ShowKeybindsScreen
+}
+
+// Create the UI and start rendering
+func StartUI() {
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
@@ -60,15 +75,15 @@ func startUI() {
 
 	topQueries := widgets.NewList()
 	topQueries.Title = "Top 10 Permitted Domains"
-	topQueries.Rows = topItems.PrettyTopQueries
+	topQueries.Rows = api.LiveTopItems.PrettyTopQueries
 
 	topAds := widgets.NewList()
 	topAds.Title = "Top 10 Blocked Domains"
-	topAds.Rows = topItems.PrettyTopAds
+	topAds.Rows = api.LiveTopItems.PrettyTopAds
 
 	queryLog := widgets.NewList()
-	queryLog.Title = fmt.Sprintf("Latest %d queries", allQueries.AmountOfQueriesInLog)
-	queryLog.Rows = allQueries.Table
+	queryLog.Title = fmt.Sprintf("Latest %d queries", api.LiveAllQueries.AmountOfQueriesInLog)
+	queryLog.Rows = api.LiveAllQueries.Table
 
 	keybindsPrompt := widgets.NewParagraph()
 	keybindsPrompt.Text = "Press F1 at any time to view keybinds..."
@@ -106,7 +121,7 @@ func startUI() {
 
 	keybindsList := widgets.NewList()
 	keybindsList.Title = "Pi-CLI keybinds"
-	keybindsList.Rows = piCLIData.Keybinds
+	keybindsList.Rows = data.LivePiCLIData.Keybinds
 
 	returnHomePrompt := widgets.NewParagraph()
 	returnHomePrompt.Text = "Press F1 at any time to return home..."
@@ -125,29 +140,32 @@ func startUI() {
 	)
 
 	draw := func() {
-		if !piCLIData.ShowKeybindsScreen {
+		if uiCanDraw() {
 			// 4 top summary boxes
-			totalQueries.Text = summary.QueriesToday
-			queriesBlocked.Text = summary.BlockedToday
-			percentBlocked.Text = summary.PercentBlockedToday + "%"
-			domainsOnBlocklist.Text = summary.DomainsOnBlocklist
+			totalQueries.Text = api.LiveSummary.QueriesToday
+			queriesBlocked.Text = api.LiveSummary.BlockedToday
+			percentBlocked.Text = api.LiveSummary.PercentBlockedToday + "%"
+			domainsOnBlocklist.Text = api.LiveSummary.DomainsOnBlocklist
 
 			// domain lists
-			topQueries.Rows = topItems.PrettyTopQueries
-			topAds.Rows = topItems.PrettyTopAds
+			topQueries.Rows = api.LiveTopItems.PrettyTopQueries
+			topAds.Rows = api.LiveTopItems.PrettyTopAds
 
 			// query log
-			queryLog.Rows = allQueries.Table
-			queryLog.Title = fmt.Sprintf("Latest %d queries", allQueries.AmountOfQueriesInLog)
+			queryLog.Rows = api.LiveAllQueries.Table
+			queryLog.Title = fmt.Sprintf("Latest %d queries", api.LiveAllQueries.AmountOfQueriesInLog)
 
-			// status text
-			formattedTime := piCLIData.LastUpdated.Format("15:04:05")
+			// timestamp of the last data grab
+			formattedTime := data.LivePiCLIData.LastUpdated.Format("15:04:05")
 
 			piHoleInfo.Rows = []string{
-				fmt.Sprintf("Pi-Hole Status: %s", strings.Title(summary.Status)),
-				fmt.Sprintf("Data last updated: %s (update every %ds)", formattedTime, piCLIData.Settings.RefreshS),
-				fmt.Sprintf("Privacy Level: %s", getPrivacyLevel(&summary.PrivacyLevel)),
-				fmt.Sprintf("Total Clients Seen: %s", summary.TotalClientsSeen),
+				fmt.Sprintf("Pi-Hole Status: %s", strings.Title(api.LiveSummary.Status)),
+				fmt.Sprintf(
+					"Data last updated: %s (update every %ds)",
+					formattedTime,
+					data.LivePiCLIData.Settings.RefreshS),
+				fmt.Sprintf("Privacy Level: %s", getPrivacyLevel(&api.LiveSummary.PrivacyLevel)),
+				fmt.Sprintf("Total Clients Seen: %s", api.LiveSummary.TotalClientsSeen),
 			}
 
 			// render the grid
@@ -160,11 +178,10 @@ func startUI() {
 	uiEvents := ui.PollEvents()
 
 	// channel used to capture ticker events to time data update events
-	tickerDuration := time.Duration(piCLIData.Settings.RefreshS)
+	tickerDuration := time.Duration(data.LivePiCLIData.Settings.RefreshS)
 	dataUpdateTicker := time.NewTicker(time.Second * tickerDuration).C
 
-	// channel used to capture ticker events to time redraws
-	// ticker event triggered every 33.3ms (30fps) or redraws per second if you want to be pedantic
+	// channel used to capture ticker events to time redraws (30fps)
 	drawTicker := time.NewTicker(time.Second / 30).C
 
 	updateData()
@@ -181,7 +198,7 @@ func startUI() {
 			// respond to terminal resize events
 			case "<Resize>":
 				payload := e.Payload.(ui.Resize)
-				if !piCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					grid.SetRect(0, 0, payload.Width, payload.Height)
 					ui.Render(grid)
 					break
@@ -193,84 +210,85 @@ func startUI() {
 
 			// increase (by 1) the number of queries in the query log
 			case "e":
-				if !piCLIData.ShowKeybindsScreen {
-					allQueries.AmountOfQueriesInLog++
-					allQueries.Queries = append(allQueries.Queries, Query{})
+				if uiCanDraw() {
+					api.LiveAllQueries.AmountOfQueriesInLog++
+					api.LiveAllQueries.Queries = append(api.LiveAllQueries.Queries, api.Query{})
 				}
 				break
 
 			// increase (by 10) the number of queries in the query log
 			case "r":
-				if !piCLIData.ShowKeybindsScreen {
-					allQueries.AmountOfQueriesInLog += 10
-					allQueries.Queries = append(allQueries.Queries, make([]Query, 10)...)
+				if uiCanDraw() {
+					api.LiveAllQueries.AmountOfQueriesInLog += 10
+					api.LiveAllQueries.Queries = append(api.LiveAllQueries.Queries, make([]api.Query, 10)...)
 				}
 				break
 
 			// decrease (by 1) the number of queries in the query log
 			case "d":
-				if !piCLIData.ShowKeybindsScreen && allQueries.AmountOfQueriesInLog > 1 {
-					allQueries.AmountOfQueriesInLog--
-					allQueries.Queries = allQueries.Queries[:len(allQueries.Queries)-1]
+				if uiCanDraw() && api.LiveAllQueries.AmountOfQueriesInLog > 1 {
+					api.LiveAllQueries.AmountOfQueriesInLog--
+					api.LiveAllQueries.Queries = api.LiveAllQueries.Queries[:len(api.LiveAllQueries.Queries)-1]
 				}
 				break
 
 			// decrease (by 10) the number of queries in the query log
 			case "f":
-				if !piCLIData.ShowKeybindsScreen {
-					if allQueries.AmountOfQueriesInLog-10 <= 0 {
-						allQueries.AmountOfQueriesInLog = 1
-						allQueries.Queries = allQueries.Queries[:len(allQueries.Queries)-(len(allQueries.Queries)-1)]
+				if uiCanDraw() {
+					if api.LiveAllQueries.AmountOfQueriesInLog-10 <= 0 {
+						api.LiveAllQueries.AmountOfQueriesInLog = 1
+						api.LiveAllQueries.Queries =
+							api.LiveAllQueries.Queries[:len(api.LiveAllQueries.Queries)-(len(api.LiveAllQueries.Queries)-1)]
 					} else {
-						allQueries.AmountOfQueriesInLog -= 10
-						allQueries.Queries = allQueries.Queries[:len(allQueries.Queries)-10]
+						api.LiveAllQueries.AmountOfQueriesInLog -= 10
+						api.LiveAllQueries.Queries = api.LiveAllQueries.Queries[:len(api.LiveAllQueries.Queries)-10]
 					}
 				}
 				break
 
 			// scroll down (by 1) in the query log list
 			case "<Down>":
-				if !piCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					queryLog.ScrollDown()
 				}
 				break
 
 			// scroll down (by 10) in the query log list
 			case "<PageDown>":
-				if !piCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					queryLog.ScrollAmount(10)
 				}
 				break
 
 			// scroll up (by 1) in the query log list
 			case "<Up>":
-				if !piCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					queryLog.ScrollUp()
 				}
 				break
 
 			// scroll up (by 10) in the query log list
 			case "<PageUp>":
-				if !piCLIData.ShowKeybindsScreen {
+				if uiCanDraw() {
 					queryLog.ScrollAmount(-10)
 				}
 				break
 
 			// enable or disable the Pi-Hole
 			case "p":
-				if !piCLIData.ShowKeybindsScreen {
-					if summary.Status == "enabled" {
-						disablePiHole(false, 0)
+				if uiCanDraw() {
+					if api.LiveSummary.Status == "enabled" {
+						api.DisablePiHole(false, 0)
 					} else {
-						enablePiHole()
+						api.EnablePiHole()
 					}
 				}
 				break
 
 			// switch grids between the keybinds view and the main screen
 			case "<F1>":
-				//ui.Clear()
-				piCLIData.ShowKeybindsScreen = !piCLIData.ShowKeybindsScreen
+				ui.Clear()
+				data.LivePiCLIData.ShowKeybindsScreen = !data.LivePiCLIData.ShowKeybindsScreen
 				break
 			}
 
@@ -283,7 +301,7 @@ func startUI() {
 		// refresh event used to time API polls for up to date data
 		case <-dataUpdateTicker:
 			// there's only a need to make API calls when the keybinds screen isn't being shown
-			if !piCLIData.ShowKeybindsScreen {
+			if uiCanDraw() {
 				updateData()
 			}
 			break
