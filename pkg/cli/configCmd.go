@@ -10,17 +10,11 @@ import (
 )
 
 /*
-	This file stores commands that are used to manage the configuration data that is required
-	by Pi-CLI to function. This includes the ability to do things such as view existing saved
-	config data, and delete any saved config files and API keys from the system.
-*/
-
-/*
 	Searches for and deletes:
 		- the API key from the system keyring (if exists)
 		- the config file from the user's home directory (if exists)
 */
-func ConfigDeleteCommand(c *cli.Context) error {
+func ConfigDeleteCommand(*cli.Context) error {
 	if auth.DeleteAPIKeyFromKeyring() {
 		color.Green("System keyring API entry has been deleted!")
 	} else {
@@ -39,7 +33,7 @@ func ConfigDeleteCommand(c *cli.Context) error {
 	If a config file is present, that can be loaded and displayed,
 	otherwise, the user can be prompted to create one.
 */
-func ConfigViewCommand(c *cli.Context) error {
+func ConfigViewCommand(*cli.Context) error {
 	/*
 		- Pi-Hole IP address
 		- Pi-Hole port

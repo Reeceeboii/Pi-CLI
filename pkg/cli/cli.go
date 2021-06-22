@@ -2,8 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"github.com/Reeceeboii/Pi-CLI/pkg/api"
-	"github.com/Reeceeboii/Pi-CLI/pkg/database"
 	"github.com/Reeceeboii/Pi-CLI/pkg/ui"
 	"github.com/urfave/cli/v2"
 	"time"
@@ -62,32 +60,16 @@ var App = cli.App{
 					Action:  RunSummaryCommand,
 				},
 				{
-					Name:    "top-queries",
-					Aliases: []string{"tq"},
-					Usage:   "Extract the current top 10 permitted DNS queries",
-					Action: func(context *cli.Context) error {
-						InitialisePICLI()
-						api.LiveTopItems.Update(nil)
-						fmt.Printf("Top queries as of @ %s\n\n", time.Now().Format(time.Stamp))
-						for _, q := range api.LiveTopItems.PrettyTopQueries {
-							fmt.Println(q)
-						}
-						return nil
-					},
+					Name:    "top-forwarded",
+					Aliases: []string{"tf"},
+					Usage:   "Extract the current top 10 forwarded DNS queries",
+					Action:  RunTopTenForwardedCommand,
 				},
 				{
-					Name:    "top-ads",
-					Aliases: []string{"ta"},
-					Usage:   "Extract the current top 10 blocked domains",
-					Action: func(c *cli.Context) error {
-						InitialisePICLI()
-						api.LiveTopItems.Update(nil)
-						fmt.Printf("Top ads as of @ %s\n\n", time.Now().Format(time.Stamp))
-						for _, q := range api.LiveTopItems.PrettyTopAds {
-							fmt.Println(q)
-						}
-						return nil
-					},
+					Name:    "top-blocked",
+					Aliases: []string{"tb"},
+					Usage:   "Extract the current top 10 blocked DNS queries",
+					Action:  RunTopTenBlockedCommand,
 				},
 				{
 					Name:    "latest-queries",
@@ -101,42 +83,13 @@ var App = cli.App{
 							DefaultText: "10",
 						},
 					},
-					Action: func(c *cli.Context) error {
-						queryAmount := c.Int("queries")
-						if queryAmount == 0 {
-							queryAmount = 10
-						}
-						if queryAmount < 1 {
-							fmt.Println("Please enter a number of queries >= 1")
-							return nil
-						}
-						InitialisePICLI()
-						api.LiveAllQueries.AmountOfQueriesInLog = queryAmount
-						api.LiveAllQueries.Queries = make([]api.Query, api.LiveAllQueries.AmountOfQueriesInLog)
-						api.LiveAllQueries.Update(nil)
-						for _, query := range api.LiveAllQueries.Table {
-							fmt.Println(query)
-						}
-						return nil
-					},
+					Action: RunLatestQueriesCommand,
 				},
 				{
 					Name:    "enable",
 					Aliases: []string{"e"},
 					Usage:   "Enable the Pi-Hole",
-					Action: func(context *cli.Context) error {
-						InitialisePICLI()
-						api.LiveSummary.Update(nil)
-						if api.LiveSummary.Status == "enabled" {
-							fmt.Println("Pi-Hole is already enabled!")
-
-						} else {
-							api.EnablePiHole()
-							fmt.Println("Pi-Hole enabled!")
-						}
-
-						return nil
-					},
+					Action:  RunEnablePiHoleCommand,
 				},
 				{
 					Name:    "disable",
@@ -146,27 +99,11 @@ var App = cli.App{
 						&cli.Int64Flag{
 							Name:        "timeout",
 							Aliases:     []string{"t"},
-							Usage:       "A timeout in seconds. Pi-Hole will re-enable when this time has elapsed.",
+							Usage:       "A timeout in seconds. Pi-Hole will re-enable after this time has elapsed.",
 							DefaultText: "permanent",
 						},
 					},
-					Action: func(context *cli.Context) error {
-						InitialisePICLI()
-						api.LiveSummary.Update(nil)
-						if api.LiveSummary.Status == "disabled" {
-							fmt.Println("Pi-Hole is already disabled!")
-						} else {
-							timeout := context.Int64("timeout")
-							if timeout == 0 {
-								api.DisablePiHole(false, 0)
-								fmt.Println("Pi-Hole disabled until explicitly re-enabled")
-							} else {
-								api.DisablePiHole(true, timeout)
-								fmt.Printf("Pi-Hole disabled. Will re-enable in %d seconds\n", timeout)
-							}
-						}
-						return nil
-					},
+					Action: RunDisablePiHoleCommand,
 				},
 			},
 		},
@@ -174,13 +111,6 @@ var App = cli.App{
 			Name:    "database",
 			Aliases: []string{"d"},
 			Usage:   "Analytics options to run on a Pi-Hole's FTL database",
-
-			/*
-				FOR ALL DATABASE COMMANDS:
-					If no path is provided by the user, Pi-CLI will assume that the database file's
-					name hasn't been changed from it's default name, and that is has been placed in the
-					same working directory that it is being executed from. This saves some command typing.
-			*/
 			Subcommands: []*cli.Command{
 				{
 					Name:    "client-summary",
@@ -190,20 +120,11 @@ var App = cli.App{
 						&cli.StringFlag{
 							Name:        "path",
 							Aliases:     []string{"p"},
-							Usage:       "Path to the Pi-Hole FTL database file",
+							Usage:       "Path to a Pi-Hole FTL database file",
 							DefaultText: "./pihole-FTL.db",
 						},
 					},
-					Action: func(context *cli.Context) error {
-						path := context.String("path")
-						if path == "" {
-							path = "./pihole-FTL.db"
-						}
-
-						conn := database.Connect(path)
-						database.ClientSummary(conn)
-						return nil
-					},
+					Action: RunDatabaseClientSummaryCommand,
 				},
 				{
 					Name:    "top-queries",
@@ -229,18 +150,7 @@ var App = cli.App{
 							DefaultText: "No filter",
 						},
 					},
-					Action: func(context *cli.Context) error {
-						path := context.String("path")
-						if path == "" {
-							path = "./pihole-FTL.db"
-						}
-
-						conn := database.Connect(path)
-
-						database.TopQueries(conn, context.Int64("limit"), context.String("filter"))
-
-						return nil
-					},
+					Action: RunDatabaseClientSummaryCommand,
 				},
 			},
 		},

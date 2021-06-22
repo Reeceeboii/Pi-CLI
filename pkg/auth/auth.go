@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"github.com/Reeceeboii/Pi-CLI/pkg/constants"
 	"github.com/Reeceeboii/Pi-CLI/pkg/data"
 	"github.com/Reeceeboii/Pi-CLI/pkg/network"
 	"github.com/buger/jsonparser"
@@ -11,9 +10,17 @@ import (
 	"net/http"
 )
 
+// Constant values required for use in authentication and API key management
+const (
+	// Keyring service
+	KeyringService = "PiCLI"
+	// Keyring user
+	KeyringUsr = "api-key"
+)
+
 // Retrieve the API key from the system keyring
 func RetrieveAPIKeyFromKeyring() string {
-	APIKey, err := keyring.Get(constants.KeyringService, constants.KeyringUsr)
+	APIKey, err := keyring.Get(KeyringService, KeyringUsr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -24,7 +31,7 @@ func RetrieveAPIKeyFromKeyring() string {
 	Store the API key in the system keyring. Returns an error if this action failed.
 */
 func StoreAPIKeyInKeyring(key string) error {
-	if err := keyring.Set(constants.KeyringService, constants.KeyringUsr, key); err != nil {
+	if err := keyring.Set(KeyringService, KeyringUsr, key); err != nil {
 		return err
 	}
 	return nil
@@ -32,7 +39,7 @@ func StoreAPIKeyInKeyring(key string) error {
 
 // Delete the stored API key if it exists
 func DeleteAPIKeyFromKeyring() bool {
-	if err := keyring.Delete(constants.KeyringService, constants.KeyringUsr); err != nil {
+	if err := keyring.Delete(KeyringService, KeyringUsr); err != nil {
 		return false
 	}
 	return true
@@ -40,7 +47,7 @@ func DeleteAPIKeyFromKeyring() bool {
 
 // Is there an entry for the API key in the system keyring?
 func APIKeyIsInKeyring() bool {
-	if _, err := keyring.Get(constants.KeyringService, constants.KeyringUsr); err != nil {
+	if _, err := keyring.Get(KeyringService, KeyringUsr); err != nil {
 		return false
 	}
 	return true

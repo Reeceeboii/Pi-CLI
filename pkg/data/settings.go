@@ -2,7 +2,6 @@ package data
 
 import (
 	"encoding/json"
-	"github.com/Reeceeboii/Pi-CLI/pkg/constants"
 	"io/ioutil"
 	"log"
 	"os"
@@ -14,6 +13,16 @@ import (
 
 // Store PiCLI settings
 var PICLISettings = NewSettings()
+
+// Constant values required by Pi-CLI
+const (
+	// Port that the Pi-Hole API is defaulted to
+	DefaultPort = 80
+	// The default refresh rate of the data in seconds
+	DefaultRefreshS = 1
+	// The name of the configuration file
+	ConfigFileName = "picli-config.json"
+)
 
 // Settings contains the current configuration options being used by Pi-CLI
 type Settings struct {
@@ -40,8 +49,8 @@ func ConfigFileExists() bool {
 func NewSettings() *Settings {
 	return &Settings{
 		PiHoleAddress: "",
-		PiHolePort:    constants.DefaultPort,
-		RefreshS:      constants.DefaultRefreshS,
+		PiHolePort:    DefaultPort,
+		RefreshS:      DefaultRefreshS,
 		APIKey:        "",
 	}
 }
@@ -98,7 +107,7 @@ func GetConfigFileLocation() string {
 		with backslashes as the directory separators rather than forward slashes
 	*/
 	if runtime.GOOS == "windows" {
-		return strings.ReplaceAll(path.Join(usr.HomeDir, constants.ConfigFileName), "/", "\\")
+		return strings.ReplaceAll(path.Join(usr.HomeDir, ConfigFileName), "/", "\\")
 	}
-	return path.Join(usr.HomeDir, constants.ConfigFileName)
+	return path.Join(usr.HomeDir, ConfigFileName)
 }

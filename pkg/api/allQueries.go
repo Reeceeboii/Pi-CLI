@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"github.com/Reeceeboii/Pi-CLI/pkg/constants"
 	"github.com/Reeceeboii/Pi-CLI/pkg/data"
 	"github.com/Reeceeboii/Pi-CLI/pkg/network"
 	"github.com/buger/jsonparser"
@@ -16,6 +15,12 @@ import (
 
 // instance of AllQueries used at runtime
 var LiveAllQueries = NewAllQueries()
+
+const (
+	AllQueryDataKey = "data"
+	// The starting setting for the number of queries that are included in the live log
+	DefaultAmountOfQueries = 10
+)
 
 // Holds information about a single query logged by Pi-Hole
 type Query struct {
@@ -44,8 +49,8 @@ type AllQueries struct {
 // Make a new AllQueries instance
 func NewAllQueries() *AllQueries {
 	return &AllQueries{
-		Queries:              make([]Query, constants.DefaultAmountOfQueries),
-		AmountOfQueriesInLog: constants.DefaultAmountOfQueries,
+		Queries:              make([]Query, DefaultAmountOfQueries),
+		AmountOfQueriesInLog: DefaultAmountOfQueries,
 		Table:                []string{},
 	}
 }
@@ -83,7 +88,7 @@ func (allQueries *AllQueries) Update(wg *sync.WaitGroup) {
 		There has to be a nicer way to do this. This approach is absolute garbage.
 	*/
 	for iter := 0; iter < allQueries.AmountOfQueriesInLog; iter++ {
-		queryArray, _, _, _ := jsonparser.Get(parsedBody, constants.AllQueryDataKey, fmt.Sprintf("[%d]", iter))
+		queryArray, _, _, _ := jsonparser.Get(parsedBody, AllQueryDataKey, fmt.Sprintf("[%d]", iter))
 		unixTime, _ := jsonparser.GetString(queryArray, "[0]")
 		queryType, _ := jsonparser.GetString(queryArray, "[1]")
 		domain, _ := jsonparser.GetString(queryArray, "[2]")

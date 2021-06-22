@@ -4,12 +4,24 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/Reeceeboii/Pi-CLI/pkg/constants"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os"
 	"text/tabwriter"
 	"time"
+)
+
+// Database constants
+const (
+	// The name of the database driver to use
+	DBDriverName = "sqlite3"
+	// The default limit on the number of queries returned from some database queries
+	DefaultQueryTableLimit = 10
+	/*
+		The default location and name used by database commands to look for the Pi-Hole's
+		FTL database file
+	*/
+	DefaultDatabaseFileLocation = "./pihole-FTL.db"
 )
 
 /*
@@ -19,7 +31,7 @@ import (
 func Connect(pathToPotentialDB string) *sql.DB {
 	conn := &sql.DB{}
 	if validateDatabase(pathToPotentialDB) {
-		conn, _ = sql.Open(constants.DBDriverName, pathToPotentialDB)
+		conn, _ = sql.Open(DBDriverName, pathToPotentialDB)
 	}
 	return conn
 }
@@ -72,7 +84,7 @@ func doesDatabaseFileExist(pathToPotentialDB string) error {
 // Can a connection be opened with the DB file?
 func canOpenConnectionToDB(pathToPotentialDB string) error {
 	// attempt to open a connection to the database
-	conn, err := sql.Open(constants.DBDriverName, pathToPotentialDB)
+	conn, err := sql.Open(DBDriverName, pathToPotentialDB)
 
 	/*
 		 	If the connection failed, return an error. If we get to this point, the file is valid

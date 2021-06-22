@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"github.com/Reeceeboii/Pi-CLI/pkg/constants"
 	"github.com/Reeceeboii/Pi-CLI/pkg/data"
 	"github.com/Reeceeboii/Pi-CLI/pkg/network"
 	"github.com/buger/jsonparser"
@@ -16,6 +15,12 @@ import (
 
 // Instance of TopItems used at runtime
 var LiveTopItems = NewTopItems()
+
+// Keys that can be used to index JSON responses from the Pi-Hole's API
+const (
+	TopQueriesTodayKey = "top_queries"
+	TopAdsTodayKey     = "top_ads"
+)
 
 // TopItems stores top permitted domains and top blocked domains (requires authentication to retrieve)
 type TopItems struct {
@@ -72,13 +77,13 @@ func (topItems *TopItems) Update(wg *sync.WaitGroup) {
 	_ = jsonparser.ObjectEach(parsedBody, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
 		topItems.TopQueries[string(key)], _ = strconv.Atoi(string(value))
 		return nil
-	}, constants.TopQueriesTodayKey)
+	}, TopQueriesTodayKey)
 
 	// and the same for the top ad networks
 	_ = jsonparser.ObjectEach(parsedBody, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
 		topItems.TopAds[string(key)], _ = strconv.Atoi(string(value))
 		return nil
-	}, constants.TopAdsTodayKey)
+	}, TopAdsTodayKey)
 
 	topItems.prettyConvert()
 }

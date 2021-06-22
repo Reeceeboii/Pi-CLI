@@ -155,7 +155,7 @@ func StartUI() {
 			queryLog.Rows = api.LiveAllQueries.Table
 			queryLog.Title = fmt.Sprintf("Latest %d queries", api.LiveAllQueries.AmountOfQueriesInLog)
 
-			// status text
+			// timestamp of the last data grab
 			formattedTime := data.LivePiCLIData.LastUpdated.Format("15:04:05")
 
 			piHoleInfo.Rows = []string{

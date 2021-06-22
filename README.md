@@ -35,11 +35,20 @@
 
 # Usage
 
-### ` picli.exe [global options] command [command options] [arguments...] `
+### `~$ picli [global options] command [command options] [arguments...]`
 
-For help, run `~$ ./picli -h`
+<br>
 
-### Commands
+For help, run `~$ picli h`
+
+For command help, run `~$ picli <command> h`
+
+For subcommand help, run `~$ picli <command> -h`
+
+
+<br>
+
+# Commands
 
 ```
    setup, s     Configure Pi-CLI
@@ -65,8 +74,8 @@ _Run a single command without the live view_
 
 ```
    summary, s          Extract a basic summary of data from the Pi-Hole
-   top-queries, tq     Extract the current top 10 permitted DNS queries
-   top-ads, ta         Extract the current top 10 blocked domains
+   top-forwarded, tf   Extract the current top 10 forwarded DNS queries
+   top-blocked, tb     Extract the current top 10 blocked DNS queries
    latest-queries, lq  Extract the latest queries
    enable, e           Enable the Pi-Hole
    disable, d          Disable the Pi-Hole

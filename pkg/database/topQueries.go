@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"github.com/Reeceeboii/Pi-CLI/pkg/constants"
 	"github.com/fatih/color"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -39,8 +38,8 @@ func TopQueries(db *sql.DB, limit int64, domainFilter string) {
 		limit = math.MaxInt64
 		color.Yellow("Limit: unlimited")
 	} else if limit == 0 {
-		limit = constants.DefaultQueryTableLimit
-		color.Yellow("Limit: %d", constants.DefaultQueryTableLimit)
+		limit = DefaultQueryTableLimit
+		color.Yellow("Limit: %d", DefaultQueryTableLimit)
 	} else {
 		color.Yellow("Limit: %d", limit)
 	}

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"github.com/Reeceeboii/Pi-CLI/pkg/constants"
 	"github.com/Reeceeboii/Pi-CLI/pkg/data"
 	"github.com/Reeceeboii/Pi-CLI/pkg/network"
 	"github.com/buger/jsonparser"
@@ -12,6 +11,17 @@ import (
 )
 
 var LiveSummary = NewSummary()
+
+// Keys that can be used to index JSON responses from the Pi-Hole's API
+const (
+	DNSQueriesTodayKey     = "dns_queries_today"
+	AdsBlockedTodayKey     = "ads_blocked_today"
+	PercentBlockedTodayKey = "ads_percentage_today"
+	DomainsOnBlockListKey  = "domains_being_blocked"
+	StatusKey              = "status"
+	PrivacyLevelKey        = "privacy_level"
+	TotalClientsSeenKey    = "clients_ever_seen"
+)
 
 // Summary holds things that do not require authentication to retrieve
 type Summary struct {
@@ -33,6 +43,9 @@ type Summary struct {
 	TotalClientsSeen string
 }
 
+/*
+	Returns a new Summary instance with default values for all fields
+*/
 func NewSummary() *Summary {
 	return &Summary{
 		QueriesToday:        "",
@@ -74,11 +87,11 @@ func (summary *Summary) Update(wg *sync.WaitGroup) {
 	parsedBody, _ := ioutil.ReadAll(res.Body)
 	// yoink out all the data from the response
 	// pack it into the struct
-	summary.QueriesToday, _ = jsonparser.GetString(parsedBody, constants.DNSQueriesTodayKey)
-	summary.BlockedToday, _ = jsonparser.GetString(parsedBody, constants.AdsBlockedTodayKey)
-	summary.PercentBlockedToday, _ = jsonparser.GetString(parsedBody, constants.PercentBlockedTodayKey)
-	summary.DomainsOnBlocklist, _ = jsonparser.GetString(parsedBody, constants.DomainsOnBlockListKey)
-	summary.Status, _ = jsonparser.GetString(parsedBody, constants.StatusKey)
-	summary.PrivacyLevel, _ = jsonparser.GetString(parsedBody, constants.PrivacyLevelKey)
-	summary.TotalClientsSeen, _ = jsonparser.GetString(parsedBody, constants.TotalClientsSeenKey)
+	summary.QueriesToday, _ = jsonparser.GetString(parsedBody, DNSQueriesTodayKey)
+	summary.BlockedToday, _ = jsonparser.GetString(parsedBody, AdsBlockedTodayKey)
+	summary.PercentBlockedToday, _ = jsonparser.GetString(parsedBody, PercentBlockedTodayKey)
+	summary.DomainsOnBlocklist, _ = jsonparser.GetString(parsedBody, DomainsOnBlockListKey)
+	summary.Status, _ = jsonparser.GetString(parsedBody, StatusKey)
+	summary.PrivacyLevel, _ = jsonparser.GetString(parsedBody, PrivacyLevelKey)
+	summary.TotalClientsSeen, _ = jsonparser.GetString(parsedBody, TotalClientsSeenKey)
 }
