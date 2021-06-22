@@ -1,7 +1,6 @@
 package data
 
 import (
-	"github.com/Reeceeboii/Pi-CLI/pkg/settings"
 	"time"
 )
 
@@ -11,7 +10,7 @@ var LivePiCLIData = NewPiCLIData()
 // Stores the data needed by Pi-CLI during runtime
 type PiCLIData struct {
 	// An instance of settings.Settings
-	Settings *settings.Settings
+	Settings *Settings
 	// Remote address of the Pi-Hole
 	FormattedAPIAddress string
 	// The API key used to authenticate with the Pi-Hole

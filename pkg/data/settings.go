@@ -1,14 +1,15 @@
-package settings
+package data
 
 import (
 	"encoding/json"
 	"github.com/Reeceeboii/Pi-CLI/pkg/constants"
-	"github.com/fatih/color"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
 	"path"
+	"runtime"
+	"strings"
 )
 
 // Store PiCLI settings
@@ -27,7 +28,7 @@ type Settings struct {
 }
 
 // Generate the location of the config file (or at least where it should be)
-var configFileLocation = getConfigFileLocation()
+var configFileLocation = GetConfigFileLocation()
 
 // Checks for the existence of a config file
 func ConfigFileExists() bool {
@@ -57,16 +58,15 @@ func (settings *Settings) LoadFromFile() {
 }
 
 // Saves the current settings to a config file
-func (settings *Settings) SaveToFile() {
+func (settings *Settings) SaveToFile() error {
 	byteArr, err := json.MarshalIndent(settings, "", "\t")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if err = ioutil.WriteFile(configFileLocation, byteArr, 0644); err != nil {
-		log.Fatal(err)
-	} else {
-		color.Green("Saved configuration to %s", configFileLocation)
+		return err
 	}
+	return nil
 }
 
 // Is API key stored in the config file? If not, off to the system keyring you go!
@@ -87,11 +87,18 @@ func DeleteConfigFile() bool {
 }
 
 // Return the path to the config file
-func getConfigFileLocation() string {
+func GetConfigFileLocation() string {
 	usr, err := user.Current()
 	if err != nil {
 		log.Fatal(err)
 	}
-	// return user's home directory plus the config file name
+
+	/*
+		Return user's home directory plus the config file name. If on Windows, make sure path is returned
+		with backslashes as the directory separators rather than forward slashes
+	*/
+	if runtime.GOOS == "windows" {
+		return strings.ReplaceAll(path.Join(usr.HomeDir, constants.ConfigFileName), "/", "\\")
+	}
 	return path.Join(usr.HomeDir, constants.ConfigFileName)
 }

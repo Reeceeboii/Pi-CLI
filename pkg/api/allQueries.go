@@ -97,7 +97,6 @@ func (allQueries *AllQueries) Update(wg *sync.WaitGroup) {
 			ForwardedTo:  forwardedTo,
 		}
 	}
-
 	allQueries.convertToTable()
 }
 
