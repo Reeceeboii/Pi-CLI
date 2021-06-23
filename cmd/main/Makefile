@@ -1,15 +1,27 @@
+# REQUIREMENTS
+# 	Make
+#	go toolchain
+# LINUX SPECIFIC
+#	gcc
+#	gcc-mingw-w64-x86-64
+# WINDOWS SPECIFIC
+#	MinGW
+
 # Parameters
 GO-CMD=go
 GO-BUILD=$(GO-CMD) build
-GO-TEST=$(GO-CMD) test
 
 # Binary names
 WINDOWS-BINARY=picli.exe
 LINUX-BINARY=picli-linux
 MAC-BINARY=picli-mac
 
-# Misc. compiler flags
-REMOVE-DEBUG-FLAGS=-ldflags "-s -w"
+# Linker flags
+LINKER_FLAGS=-ldflags "-s -w"
+
+# Compiling for Windows from Linux requires the MinGW-w64 x86 cross compiler
+CGO_ENABLED=CGO_ENABLED=1
+MINGW_CROSS_COMPILER=CC=x86_64-w64-mingw32-gcc
 
 # Cross-compilation compiler operating system flags
 GOOS-WINDOWS=GOOS=windows
@@ -17,28 +29,20 @@ GOOS-MAC=GOOS=darwin
 GOOS-LINUX=GOOS=linux
 
 # Compiling Pi-CLI for Windows
-win:
+win: $(objects)
 	@echo "Compiling for Windows..."
-	$(GOOS-WINDOWS) $(GO-BUILD) $(REMOVE-DEBUG-FLAGS) -o $(WINDOWS-BINARY)
-
-# Compiling for Windows *on* a Windows machine. This is required as
-# placing environment variables inline with the go compiler
-# (or any other executable for that matter), is not supported on Windows.
-# This allows compilation via PowerShell (or cmd if you're a masochist)
-# ------------
-# As an aside, the Linux and Mac compilation options can be ran from a windows host by passing the make command
-# through to WSL first.
-# I.e. `wsl make mac` will allow the prefixed args to work as expected.
-win-self:
-	@echo "Compiling for Windows (on a Windows dev machine)..."
-	$(GO-BUILD) $(REMOVE-DEBUG-FLAGS) -o $(WINDOWS-BINARY)
+ifeq ($(OS), Windows_NT)
+	$(GO-BUILD) $(LINKER_FLAGS) -o $(WINDOWS-BINARY)
+else
+	$(GOOS-WINDOWS) $(MINGW_CROSS_COMPILER) $(CGO_ENABLED) $(GO-BUILD) $(LINKER_FLAGS) -o $(WINDOWS-BINARY)
+endif
 
 # Compiling Pi-CLI for Mac
 mac:
 	@echo "Compiling for Mac..."
-	$(GOOS-MAC) $(GO-BUILD) $(REMOVE-DEBUG-FLAGS) -o $(MAC-BINARY)
+	$(GOOS-MAC) $(GO-BUILD) $(LINKER_FLAGS) -o $(MAC-BINARY)
 
 # Compiling Pi-CLI for Linux
 linux:
 	@echo "Compiling for Linux..."
-	$(GOOS-LINUX) $(GO-BUILD) $(REMOVE-DEBUG-FLAGS) -o $(LINUX-BINARY)
+	$(GOOS-LINUX) $(GO-BUILD) $(LINKER_FLAGS) -o $(LINUX-BINARY)

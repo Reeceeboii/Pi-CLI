@@ -106,11 +106,6 @@ _These commands are ran against a Pi-Hole's FTL database file and provide **all 
     on Windows, Mac and Linux.
 
   Compilation targets are: `win`, `mac` and `linux`
-
-  There is a 4th build target called `win-self` which can be used if you're compiling Pi-CLI for Windows **on** a
-  Windows machine. There is a small difference here that stops the generic Windows compilation target from working.
-  See the `Makefile` comments for details.
-
 ---
 
 If you find Pi-CLI useful, please consider [donating to the Pi-Hole project](https://pi-hole.net/donate/)
