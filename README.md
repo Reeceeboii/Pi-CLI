@@ -92,6 +92,13 @@ _These commands are ran against a Pi-Hole's FTL database file and provide **all 
    help, h             Shows a list of commands or help for one command
 ```
 
+#### Global options
+```
+   --environment, --env  Load .env file (default: false)
+   --log, -l             Enable debug logging. Saves to user's home directory (default: false)
+   --help, -h            show help (default: false)
+```
+
 # FAQ
 
 - Where do I get my API key?
