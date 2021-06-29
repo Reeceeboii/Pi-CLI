@@ -2,9 +2,16 @@ package cli
 
 import (
 	"fmt"
+	"github.com/Reeceeboii/Pi-CLI/pkg/data"
 	"github.com/Reeceeboii/Pi-CLI/pkg/database"
+	"github.com/Reeceeboii/Pi-CLI/pkg/logger"
+	"github.com/Reeceeboii/Pi-CLI/pkg/network"
 	"github.com/Reeceeboii/Pi-CLI/pkg/ui"
+	"github.com/Reeceeboii/Pi-CLI/pkg/update"
+	"github.com/fatih/color"
+	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
+	"log"
 	"time"
 )
 
@@ -16,11 +23,26 @@ var App = cli.App{
 	Name:        "Pi-CLI",
 	Usage:       "Third party program to retrieve and display Pi-Hole data right from your terminal",
 	Description: "Pi-Hole data right from your terminal. Live updating view, query history extraction and more!",
-	Copyright:   fmt.Sprintf("Copyright (c) %d Reece Mercer", time.Now().Year()),
+	Copyright:   fmt.Sprintf("Copyright (C) %d Reece Mercer", time.Now().Year()),
+	Before:      initialiseWithGlobals,
 	Authors: []*cli.Author{
 		{
 			Name:  "Reece Mercer",
 			Email: "reecemercer981@gmail.com",
+		},
+	},
+	Flags: []cli.Flag{
+		&cli.BoolFlag{
+			Name:        "environment",
+			Aliases:     []string{"env"},
+			Usage:       "Load .env file",
+			DefaultText: "false",
+		},
+		&cli.BoolFlag{
+			Name:        "log",
+			Aliases:     []string{"l"},
+			Usage:       "Enable debug logging. Saves to user's home directory",
+			DefaultText: "false",
 		},
 	},
 	Commands: []*cli.Command{
@@ -157,9 +179,64 @@ var App = cli.App{
 		},
 	},
 
-	Action: func(context *cli.Context) error {
+	Action: func(c *cli.Context) error {
 		InitialisePICLI()
 		ui.StartUI()
 		return nil
 	},
+}
+
+// Carries out some preliminary app initialisation with the global arguments
+func initialiseWithGlobals(c *cli.Context) error {
+	/*
+		If logging flag is given, we can enable the logger. If is it not enabled (it is
+		initialised disabled by default), all logging statements using logger.PiCLIFileLogger
+		will simply have no effect.
+	*/
+	if c.Bool("log") {
+		logger.LivePiCLILogger.Enabled = true
+		logger.LivePiCLILogger.LogStatus("Logging has been enabled")
+	}
+
+	logger.LivePiCLILogger.LogStatus("Pi-CLI started")
+	logger.LivePiCLILogger.LogStartupInformation()
+
+	// If the "environment" flag has been enabled, we want to read in environment variables
+	if c.Bool("environment") {
+		logger.LivePiCLILogger.LogInformation("Environment variables flag provided, loading from environment")
+		if err := godotenv.Load(); err != nil {
+			color.Red("Failed to load .env")
+			logger.LivePiCLILogger.LogError(".env file not found, environment variables could not be loaded")
+		}
+	}
+
+	// load in the config file if it exists
+	if data.ConfigFileExists(data.GetConfigFileLocation()) {
+		data.PICLISettings.LoadFromFile(data.GetConfigFileLocation())
+	} else {
+		return nil
+	}
+
+	if data.PICLISettings.AutoCheckForUpdates {
+		logger.LivePiCLILogger.LogInformation("Starting update check")
+		latestReleaseCheckedTime, err := time.Parse(time.RFC3339, data.PICLISettings.LatestRemoteRelease.TimeChecked)
+		if err != nil {
+			logger.LivePiCLILogger.LogError("Error parsing latest release time: " + err.Error())
+			return err
+		} else {
+			// if previous update check was carried out > 20 minutes ago
+			if latestReleaseCheckedTime.Before(time.Now().Add(time.Minute * -20)) {
+				logger.LivePiCLILogger.LogInformation("Previous check > 20 minutes prior - contacting GitHub")
+				data.PICLISettings.LatestRemoteRelease = update.GetLatestGitHubRelease(network.HttpClient)
+
+				log.Println(data.PICLISettings.LatestRemoteRelease)
+				//if err := data.PICLISettings.SaveToFile(); err != nil {
+				//	color.Red("Unable to access log file!")
+				//	log.Fatal(err)
+				//}
+			}
+		}
+	}
+
+	return nil
 }

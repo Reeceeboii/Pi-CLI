@@ -2,6 +2,7 @@ package cli
 
 import (
 	"github.com/Reeceeboii/Pi-CLI/pkg/database"
+	"github.com/Reeceeboii/Pi-CLI/pkg/logger"
 	"github.com/urfave/cli/v2"
 )
 
@@ -16,10 +17,15 @@ import (
 	Extracts a summary of data regarding the Pi-Hole's clients
 */
 func RunDatabaseClientSummaryCommand(c *cli.Context) error {
+	logger.LivePiCLILogger.LogCommand("RunDatabaseClientSummaryCommand")
+
 	path := c.String("path")
 	if path == "" {
 		path = database.DefaultDatabaseFileLocation
+		logger.LivePiCLILogger.LogCommand("DB path not provided, reverting to default")
 	}
+
+	logger.LivePiCLILogger.LogCommand("DB path: " + path)
 
 	conn := database.Connect(path)
 	database.ClientSummary(conn)
@@ -31,10 +37,15 @@ func RunDatabaseClientSummaryCommand(c *cli.Context) error {
 	Extracts all time top query data from the database file.
 */
 func RunDatabaseTopQueriesCommand(c *cli.Context) error {
+	logger.LivePiCLILogger.LogCommand("RunDatabaseTopQueriesCommand")
+
 	path := c.String("path")
 	if path == "" {
 		path = database.DefaultDatabaseFileLocation
+		logger.LivePiCLILogger.LogCommand("DB path not provided, reverting to default")
 	}
+
+	logger.LivePiCLILogger.LogCommand("DB path: " + path)
 
 	conn := database.Connect(path)
 	database.TopQueries(conn, c.Int64("limit"), c.String("filter"))

@@ -10,10 +10,6 @@ import (
 )
 
 /*
-	This file stores commands that can be ran 'one-off', i.e. without needing to boot the live UI
-*/
-
-/*
 	Extracts a quick summary of the previous 24/hr of data from the Pi-Hole.
 */
 func RunSummaryCommand(*cli.Context) error {

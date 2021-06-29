@@ -6,6 +6,7 @@ import (
 	"github.com/Reeceeboii/Pi-CLI/pkg/auth"
 	"github.com/Reeceeboii/Pi-CLI/pkg/data"
 	"github.com/Reeceeboii/Pi-CLI/pkg/network"
+	"github.com/Reeceeboii/Pi-CLI/pkg/update"
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 	"log"
@@ -25,9 +26,7 @@ import (
 		- The port exposing the Pi-Hole's web interface
 		- A data refresh rate in seconds
 		- User's Pi-Hole API key (used for authentication)
-
-	It will then ask them if they wish to store the API key in their system keyring or the config
-	file itself.
+		- A choice on if the user wants Pi-CLI to automatically check for updates
 */
 func SetupCommand(c *cli.Context) error {
 	reader := bufio.NewReader(os.Stdin)
@@ -141,7 +140,7 @@ func SetupCommand(c *cli.Context) error {
 
 	color.Green("Authenticated with API key!\n")
 
-	fmt.Print("Do you wish to store the API key in your system keyring? (y/n - default y): ")
+	fmt.Print("Do you want to store the API key in your system keyring? (y/n - default y): ")
 	storageChoice, _ := reader.ReadString('\n')
 	storageChoice = strings.ToLower(strings.TrimSpace(storageChoice))
 
@@ -160,6 +159,22 @@ func SetupCommand(c *cli.Context) error {
 		} else {
 			color.Yellow("System keyring call failed, falling back to config file")
 		}
+	}
+
+	fmt.Print("Do you want to automatically check for updates (y/n - default y): ")
+	autoUpdateChoice, _ := reader.ReadString('\n')
+	autoUpdateChoice = strings.ToLower(strings.TrimSpace(autoUpdateChoice))
+
+	if autoUpdateChoice == "y" || len(autoUpdateChoice) == 0 {
+		color.Green("Automatic update checks enabled")
+
+		color.Yellow("Receiving latest release data...")
+		latestRemoteRelease := update.GetLatestGitHubRelease(network.HttpClient)
+		data.PICLISettings.LatestRemoteRelease = latestRemoteRelease
+		color.Green("Latest release data received")
+	} else {
+		data.PICLISettings.AutoCheckForUpdates = false
+		color.Yellow("Automatic update checks disabled")
 	}
 
 	// write config file to disk

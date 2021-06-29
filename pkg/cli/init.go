@@ -14,12 +14,12 @@ import (
 */
 func InitialisePICLI() {
 	// firstly, has a config file been created?
-	if !data.ConfigFileExists() {
+	if !data.ConfigFileExists(data.GetConfigFileLocation()) {
 		color.Red("Please configure Pi-CLI via the 'setup' command")
 		os.Exit(1)
 	}
 
-	data.PICLISettings.LoadFromFile()
+	data.PICLISettings.LoadFromFile(data.GetConfigFileLocation())
 
 	// retrieve the API key depending upon its storage location
 	if !data.PICLISettings.APIKeyIsInFile() && !auth.APIKeyIsInKeyring() {
