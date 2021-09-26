@@ -9,7 +9,7 @@ import (
 )
 
 /*
-	This is the main CLI app, it contains all of the various commands and subcommands
+	This is the main CLI app, it contains all the various commands and subcommands
 	that Pi-CLI is capable of responding to, and manages all of their corresponding flags
 */
 var App = cli.App{

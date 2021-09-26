@@ -34,7 +34,7 @@ func SetupCommand(c *cli.Context) error {
 
 	for {
 		// read in the IP address and check that it is valid
-		fmt.Print("Please enter the IP address of your Pi-Hole: ")
+		fmt.Print(" > Please enter the IP address of your Pi-Hole: ")
 		piHoleAddress, _ := reader.ReadString('\n')
 		ip := net.ParseIP(strings.TrimSpace(piHoleAddress))
 		if ip == nil {
@@ -47,10 +47,10 @@ func SetupCommand(c *cli.Context) error {
 
 	for {
 		// read in the port
-		fmt.Print("Please enter the port that exposes the web interface (default 80): ")
+		fmt.Print(" > Please enter the port that exposes the web interface (default 80): ")
 		piHolePort, _ := reader.ReadString('\n')
 		trimmed := strings.TrimSpace(piHolePort)
-		// if the user entered nothing, keep the default. Else, check and apply theirs
+		// if the user entered something, validate and apply. Else, revert to the default
 		if len(trimmed) > 0 {
 			intPiHolePort, err := strconv.Atoi(trimmed)
 			if err != nil {
@@ -61,8 +61,19 @@ func SetupCommand(c *cli.Context) error {
 				color.Yellow("Port must be between 1 and 65535")
 				continue
 			}
-			data.PICLISettings.PiHolePort = intPiHolePort
-			break
+			testAddressWithPort := network.GenerateAPIAddress(data.PICLISettings.PiHoleAddress, intPiHolePort)
+			if network.IsAlive(testAddressWithPort) {
+				data.PICLISettings.PiHolePort = intPiHolePort
+			} else {
+				continue
+			}
+		} else {
+			testAddressWithPort := network.GenerateAPIAddress(data.PICLISettings.PiHoleAddress, data.DefaultPort)
+			if network.IsAlive(testAddressWithPort) {
+				data.PICLISettings.PiHolePort = data.DefaultPort
+			} else {
+				continue
+			}
 		}
 
 		// send a request to the PiHole to validate that the IP and port actually point to it
@@ -93,7 +104,7 @@ func SetupCommand(c *cli.Context) error {
 
 	// read in the data refresh rate
 	for {
-		fmt.Print("Please enter your preferred data refresh rate in seconds (default 1s): ")
+		fmt.Print(" > Please enter your preferred data refresh rate in seconds (default 1s): ")
 		refreshS, _ := reader.ReadString('\n')
 		trimmed := strings.TrimSpace(refreshS)
 		if len(trimmed) > 0 {
@@ -115,7 +126,7 @@ func SetupCommand(c *cli.Context) error {
 
 	// read in the API key and work out where the user wants to store it (keyring or config file)
 	for {
-		fmt.Print("Please enter your Pi-Hole API key: ")
+		fmt.Print(" > Please enter your Pi-Hole API key: ")
 		apiKey, _ := reader.ReadString('\n')
 		apiKey = strings.TrimSpace(apiKey)
 		if len(apiKey) < 1 {
@@ -141,7 +152,7 @@ func SetupCommand(c *cli.Context) error {
 
 	color.Green("Authenticated with API key!\n")
 
-	fmt.Print("Do you wish to store the API key in your system keyring? (y/n - default y): ")
+	fmt.Print(" > Do you wish to store the API key in your system keyring? (y/n - default y): ")
 	storageChoice, _ := reader.ReadString('\n')
 	storageChoice = strings.ToLower(strings.TrimSpace(storageChoice))
 
