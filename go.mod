@@ -10,5 +10,5 @@ require (
 	github.com/nsf/termbox-go v1.1.1 // indirect
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/zalando/go-keyring v0.1.1
-	golang.org/x/text v0.3.6
+	golang.org/x/text v0.3.8
 )
