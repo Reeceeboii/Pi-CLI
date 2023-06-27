@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -17,7 +20,7 @@ func init() {
 
 /*
   NOTE:
-  Each test case is self-contained, meaning a key is stored at the beginning of each case and deleted before it ends.
+  Each test case is self-contained, for example: A key is stored at the beginning of each case and deleted before it ends.
   We do this because we cannot rely on Go to run its tests sequentially every time.
 */
 
@@ -81,5 +84,32 @@ func TestDeleteAPIKeyFromKeyring(t *testing.T) {
 	// Ensuring DeleteAPIKeyFromKeyring() does not find or delete a key as expected when the key does not exist.
 	if DeleteAPIKeyFromKeyring() {
 		t.Error("@TestDeleteAPIKeyFromKeyring: auth.DeleteAPIKeyFromKeyring() found/deleted key from keyring when one should not exist, it should have been deleted in the previous assertion.")
+	}
+}
+
+// Tests for auth.TestValidateAPIKey()
+func TestValidateAPIKey(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Ensure URL is formatted with the correct query string.
+		if !strings.Contains(r.URL.RequestURI(), "/?enable&auth=") {
+			t.Error("@TestValidateAPIKey: auth.ValidateAPIKey() did not request the expected Pi Hole auth endpoint.")
+		}
+		if r.URL.Query().Get("auth") != testKey {
+			w.Write([]byte(`{}`))
+			return
+		}
+		w.Write([]byte(`{"status": "enabled"}`))
+	}))
+
+	defer mockServer.Close()
+
+	// Requests should succeed with the correct API key
+	if !ValidateAPIKey(mockServer.URL, testKey) {
+		t.Error("@TestValidateAPIKey: auth.ValidateAPIKey() should have received a successful response from the server, but it did not.")
+	}
+
+	// Request should return an empty response with the wrong API key
+	if ValidateAPIKey(mockServer.URL, "test") {
+		t.Error("@TestValidateAPIKey: auth.ValidateAPIKey() should have received an empty response from the server as it is looking for the wrong API key.")
 	}
 }
