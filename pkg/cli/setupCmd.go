@@ -17,17 +17,17 @@ import (
 )
 
 /*
-	Reads in data from the user and uses it to construct a config file that Pi-CLI can use
-	in the future.
+Reads in data from the user and uses it to construct a config file that Pi-CLI can use
+in the future.
 
-	The setup commands takes:
-		- The IP address of the target Pi-Hole instance
-		- The port exposing the Pi-Hole's web interface
-		- A data refresh rate in seconds
-		- User's Pi-Hole API key (used for authentication)
+The setup commands takes:
+  - The IP address of the target Pi-Hole instance
+  - The port exposing the Pi-Hole's web interface
+  - A data refresh rate in seconds
+  - User's Pi-Hole API key (used for authentication)
 
-	It will then ask them if they wish to store the API key in their system keyring or the config
-	file itself.
+It will then ask them if they wish to store the API key in their system keyring or the config
+file itself.
 */
 func SetupCommand(c *cli.Context) error {
 	reader := bufio.NewReader(os.Stdin)
@@ -143,7 +143,7 @@ func SetupCommand(c *cli.Context) error {
 			data.PICLISettings.PiHoleAddress,
 			data.PICLISettings.PiHolePort)
 
-		if !auth.ValidateAPIKey(data.PICLISettings.APIKey) {
+		if !auth.ValidateAPIKey(data.LivePiCLIData.FormattedAPIAddress, data.PICLISettings.APIKey) {
 			color.Yellow("That API token doesn't seem to be correct, check it and try again!")
 		} else {
 			break
