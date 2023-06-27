@@ -10,13 +10,11 @@ import (
 	"net/http"
 )
 
-// Constant values required for use in authentication and API key management
-const (
-	// Keyring service
-	KeyringService = "PiCLI"
-	// Keyring user
-	KeyringUsr = "api-key"
-)
+// Keyring Service: Required for use in authentication and API key management
+var KeyringService = "PiCLI"
+
+// Keyring User: Required for use in authentication and API key management
+var KeyringUsr = "api-key"
 
 // Retrieve the API key from the system keyring
 func RetrieveAPIKeyFromKeyring() string {
@@ -28,7 +26,7 @@ func RetrieveAPIKeyFromKeyring() string {
 }
 
 /*
-	Store the API key in the system keyring. Returns an error if this action failed.
+Store the API key in the system keyring. Returns an error if this action failed.
 */
 func StoreAPIKeyInKeyring(key string) error {
 	if err := keyring.Set(KeyringService, KeyringUsr, key); err != nil {
