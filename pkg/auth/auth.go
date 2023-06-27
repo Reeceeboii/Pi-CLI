@@ -1,13 +1,13 @@
 package auth
 
 import (
-	"github.com/Reeceeboii/Pi-CLI/pkg/data"
-	"github.com/Reeceeboii/Pi-CLI/pkg/network"
-	"github.com/buger/jsonparser"
-	"github.com/zalando/go-keyring"
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/Reeceeboii/Pi-CLI/pkg/network"
+	"github.com/buger/jsonparser"
+	"github.com/zalando/go-keyring"
 )
 
 // Keyring Service: Required for use in authentication and API key management
@@ -52,7 +52,7 @@ func APIKeyIsInKeyring() bool {
 }
 
 // Does an key allow authentication? I.e., is is valid?
-func ValidateAPIKey(key string) bool {
+func ValidateAPIKey(url string, key string) bool {
 	/*
 		To test the validity of the API key, we can attempt to enable the Pi-Hole.
 
@@ -68,9 +68,8 @@ func ValidateAPIKey(key string) bool {
 
 	*/
 
-	url := data.LivePiCLIData.FormattedAPIAddress + "?enable" + "&auth=" + key
-
-	req, err := http.NewRequest("GET", url, nil)
+	queryString := url + "?enable" + "&auth=" + key
+	req, err := http.NewRequest("GET", queryString, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
