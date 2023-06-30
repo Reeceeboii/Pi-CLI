@@ -15,11 +15,11 @@ import (
 var wg sync.WaitGroup
 
 /*
-	Update data so it can be displayed.
-	This function makes calls to the Pi-Hole's API
+Update data so it can be displayed.
+This function makes calls to the Pi-Hole's API
 */
 func updateData() {
-	go api.LiveSummary.Update(&wg)
+	go api.LiveSummary.Update(data.LivePiCLIData.FormattedAPIAddress, data.LivePiCLIData.APIKey, &wg)
 	go api.LiveTopItems.Update(&wg)
 	go api.LiveAllQueries.Update(&wg)
 	wg.Wait()
@@ -27,17 +27,17 @@ func updateData() {
 }
 
 /*
-	Given a value representing the current privacy level, return the level name.
-	https://docs.pi-hole.net/ftldns/privacylevels/
+Given a value representing the current privacy level, return the level name.
+https://docs.pi-hole.net/ftldns/privacylevels/
 */
 func getPrivacyLevel(level *string) string {
 	return api.LiveSummary.PrivacyLevelNumberMapping[*level]
 }
 
 /*
-	Is the UI free to draw to? Currently this only takes into account the fact
-	that the keybinds view may be showing. Adding more conditions for halting live
-	UI redraws is as simple as ANDing them here
+Is the UI free to draw to? Currently this only takes into account the fact
+that the keybinds view may be showing. Adding more conditions for halting live
+UI redraws is as simple as ANDing them here
 */
 func uiCanDraw() bool {
 	return !data.LivePiCLIData.ShowKeybindsScreen

@@ -2,11 +2,13 @@ package cli
 
 import (
 	"fmt"
-	"github.com/Reeceeboii/Pi-CLI/pkg/api"
-	"github.com/fatih/color"
-	"github.com/urfave/cli/v2"
 	"strings"
 	"time"
+
+	"github.com/Reeceeboii/Pi-CLI/pkg/api"
+	"github.com/Reeceeboii/Pi-CLI/pkg/data"
+	"github.com/fatih/color"
+	"github.com/urfave/cli/v2"
 )
 
 /*
@@ -14,11 +16,11 @@ import (
 */
 
 /*
-	Extracts a quick summary of the previous 24/hr of data from the Pi-Hole.
+Extracts a quick summary of the previous 24/hr of data from the Pi-Hole.
 */
 func RunSummaryCommand(*cli.Context) error {
 	InitialisePICLI()
-	api.LiveSummary.Update(nil)
+	api.LiveSummary.Update(data.LivePiCLIData.FormattedAPIAddress, data.LivePiCLIData.APIKey, nil)
 	fmt.Printf("Summary @ %s\n", time.Now().Format(time.Stamp))
 	fmt.Println()
 
@@ -43,7 +45,7 @@ func RunSummaryCommand(*cli.Context) error {
 }
 
 /*
-	Extract the current top 10 permitted domains that have been forwarded to the upstream DNS resolver
+Extract the current top 10 permitted domains that have been forwarded to the upstream DNS resolver
 */
 func RunTopTenForwardedCommand(*cli.Context) error {
 	InitialisePICLI()
@@ -58,8 +60,8 @@ func RunTopTenForwardedCommand(*cli.Context) error {
 }
 
 /*
-	Extract the current top 10 blocked domains that the FTL has filtered out and not forwarded
-	to the upstream DNS resolver
+Extract the current top 10 blocked domains that the FTL has filtered out and not forwarded
+to the upstream DNS resolver
 */
 func RunTopTenBlockedCommand(*cli.Context) error {
 	InitialisePICLI()
