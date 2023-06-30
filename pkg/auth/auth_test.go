@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -91,7 +92,8 @@ func TestDeleteAPIKeyFromKeyring(t *testing.T) {
 func TestValidateAPIKey(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Ensure URL is formatted with the correct query string.
-		if !strings.Contains(r.URL.RequestURI(), "/?enable&auth=") {
+		if !strings.Contains(r.URL.RequestURI(), "/api.php?enable&auth=") {
+			fmt.Println(r.URL.RequestURI())
 			t.Error("@TestValidateAPIKey: auth.ValidateAPIKey() did not request the expected Pi Hole auth endpoint.")
 		}
 		if r.URL.Query().Get("auth") != testKey {
@@ -102,14 +104,14 @@ func TestValidateAPIKey(t *testing.T) {
 	}))
 
 	defer mockServer.Close()
-
+	url := mockServer.URL + "/api.php"
 	// Requests should succeed with the correct API key
-	if !ValidateAPIKey(mockServer.URL, testKey) {
+	if !ValidateAPIKey(url, testKey) {
 		t.Error("@TestValidateAPIKey: auth.ValidateAPIKey() should have received a successful response from the server, but it did not.")
 	}
 
 	// Request should return an empty response with the wrong API key
-	if ValidateAPIKey(mockServer.URL, "test") {
+	if ValidateAPIKey(url, "test") {
 		t.Error("@TestValidateAPIKey: auth.ValidateAPIKey() should have received an empty response from the server as it is looking for the wrong API key.")
 	}
 }
