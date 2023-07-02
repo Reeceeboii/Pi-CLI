@@ -2,16 +2,17 @@ package cli
 
 import (
 	"github.com/Reeceeboii/Pi-CLI/pkg/api"
+	"github.com/Reeceeboii/Pi-CLI/pkg/data"
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 )
 
 /*
-	Enable the Pi-Hole if it is not already enabled,
+Enable the Pi-Hole if it is not already enabled,
 */
 func RunEnablePiHoleCommand(*cli.Context) error {
 	InitialisePICLI()
-	api.LiveSummary.Update(nil)
+	api.LiveSummary.Update(data.LivePiCLIData.FormattedAPIAddress, data.LivePiCLIData.APIKey, nil)
 
 	if api.LiveSummary.Status == "enabled" {
 		color.Yellow("Pi-Hole is already enabled!")
@@ -24,13 +25,13 @@ func RunEnablePiHoleCommand(*cli.Context) error {
 }
 
 /*
-	Disable the Pi-Hole. This command also takes an optional timeout parameter in seconds.
-	If given and within constraints, the Pi-Hole will automatically re-enable after this
-	time period has elapsed
+Disable the Pi-Hole. This command also takes an optional timeout parameter in seconds.
+If given and within constraints, the Pi-Hole will automatically re-enable after this
+time period has elapsed
 */
 func RunDisablePiHoleCommand(c *cli.Context) error {
 	InitialisePICLI()
-	api.LiveSummary.Update(nil)
+	api.LiveSummary.Update(data.LivePiCLIData.FormattedAPIAddress, data.LivePiCLIData.APIKey, nil)
 
 	if api.LiveSummary.Status == "disabled" {
 		color.Yellow("Pi-Hole is already disabled!")

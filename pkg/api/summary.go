@@ -1,7 +1,6 @@
 package api
 
 import (
-	"github.com/Reeceeboii/Pi-CLI/pkg/data"
 	"github.com/Reeceeboii/Pi-CLI/pkg/network"
 	"github.com/buger/jsonparser"
 	"io/ioutil"
@@ -44,7 +43,7 @@ type Summary struct {
 }
 
 /*
-	Returns a new Summary instance with default values for all fields
+Returns a new Summary instance with default values for all fields
 */
 func NewSummary() *Summary {
 	return &Summary{
@@ -65,14 +64,17 @@ func NewSummary() *Summary {
 }
 
 // Updates a Summary struct with up to date information
-func (summary *Summary) Update(wg *sync.WaitGroup) {
+func (summary *Summary) Update(url string, key string, wg *sync.WaitGroup) {
 	if wg != nil {
 		wg.Add(1)
 		defer wg.Done()
 	}
-
 	// create the URL for the summary data and send a request to it
-	url := data.LivePiCLIData.FormattedAPIAddress + "?summary"
+	url += "?summary"
+	if len(key) > 0 {
+		url += "&auth=" + key
+	}
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Fatal(err)
