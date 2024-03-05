@@ -18,4 +18,6 @@
 /cmd/main/*.db
 
 # ignore binaries to prevent accidentally committing
-/cmd/main/picli-*
+cmd/main/picli-mac
+cmd/main/picli-linux
+cmd/main/picli.exe
