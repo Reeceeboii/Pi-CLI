@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    #   TODO remove this after testing
-      - 34-automated-build 
 
 jobs:
   release:
