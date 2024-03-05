@@ -5,10 +5,13 @@ on:
     branches:
       - main
       - master
+      - 34-automated-build
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+        output1: ${{ steps.create_tag.outputs.tag_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,7 +52,7 @@ jobs:
           echo "Creating tag ${TAG_NAME}"
           git tag $TAG_NAME
           git push origin $TAG_NAME
-          echo "{tag_name}={$TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
 
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
