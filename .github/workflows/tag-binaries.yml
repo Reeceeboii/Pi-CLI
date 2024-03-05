@@ -1,0 +1,37 @@
+name: Make Binaries
+
+on:  
+  push:
+    tags:
+      - '*'
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: t1m0thyj/unlock-keyring@v1
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.18
+
+    - name: Set up MinGW
+      uses: egor-tensin/setup-mingw@v2
+    
+    - name: Build windows
+      run: make -C cmd/main win
+
+    - name: Build mac
+      run: make -C cmd/main mac
+
+    - name: Build linux
+      run: make -C cmd/main linux
+      
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          cmd/main/picli-*

@@ -16,3 +16,6 @@
 
 # database file used for testing Pi-CLI's database analytics functions
 /cmd/main/*.db
+
+# ignore binaries to prevent accidentally committing
+/cmd/main/picli-*

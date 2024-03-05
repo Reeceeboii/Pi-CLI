@@ -1,0 +1,40 @@
+name: Create Tag and Draft Release
+
+on:
+  push:
+    branches:
+      - main
+    #   TODO remove this after testing
+      - 34-automated-build 
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Create Tag
+        id: create_tag
+        run: |
+          TAG_DATE=$(date +'%Y%m%d-%H%M%S')
+          TAG_NAME="v${TAG_DATE}"
+          echo "Creating tag ${TAG_NAME}"
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
+          echo "::set-output name=tag_name::$TAG_NAME"
+
+      - name: Create Draft Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.create_tag.outputs.tag_name }}
+          name: Release ${{ steps.create_tag.outputs.tag_name }}
+          draft: true
+          prerelease: true
