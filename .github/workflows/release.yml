@@ -10,8 +10,6 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    outputs:
-        output1: ${{ steps.create_tag.outputs.tag_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
